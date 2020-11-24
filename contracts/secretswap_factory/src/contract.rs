@@ -22,6 +22,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         token_code_id: msg.token_code_id,
         pair_code_id: msg.pair_code_id,
         token_code_hash: msg.token_code_hash.clone(),
+        pair_code_hash: msg.pair_code_hash.clone(),
         prng_seed: prng_seed_hashed.to_vec(),
     };
 
@@ -53,6 +54,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             owner,
             token_code_id,
             pair_code_id,
+            pair_code_hash,
             token_code_hash,
         } => try_update_config(
             deps,
@@ -60,6 +62,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             owner,
             token_code_id,
             pair_code_id,
+            pair_code_hash,
             token_code_hash,
         ),
         HandleMsg::CreatePair {
@@ -77,6 +80,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     owner: Option<HumanAddr>,
     token_code_id: Option<u64>,
     pair_code_id: Option<u64>,
+    pair_code_hash: Option<String>,
     token_code_hash: Option<String>,
 ) -> HandleResult {
     let mut config: Config = read_config(&deps.storage)?;
@@ -100,6 +104,10 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 
     if let Some(token_code_hash) = token_code_hash {
         config.token_code_hash = token_code_hash;
+    }
+
+    if let Some(pair_code_hash) = pair_code_hash {
+        config.token_code_hash = pair_code_hash;
     }
 
     store_config(&mut deps.storage, &config)?;
@@ -131,7 +139,7 @@ pub fn try_create_pair<S: Storage, A: Api, Q: Querier>(
             liquidity_token: CanonicalAddr::default(),
             contract_addr: CanonicalAddr::default(),
             asset_infos: raw_infos,
-            token_code_hash: config.token_code_hash.clone(),
+            token_code_hash: config.pair_code_hash.clone(),
         },
     )?;
 
@@ -155,7 +163,7 @@ pub fn try_create_pair<S: Storage, A: Api, Q: Querier>(
             }),
             prng_seed: Binary::from(&pair_seed),
         })?,
-        callback_code_hash: config.token_code_hash,
+        callback_code_hash: config.pair_code_hash,
     })];
 
     if let Some(hook) = init_hook {
@@ -191,7 +199,9 @@ pub fn try_register<S: Storage, A: Api, Q: Querier>(
 
     let pair_contract = env.message.sender;
 
-    let liquidity_token = query_liquidity_token(&deps, &pair_contract, &pair_info.token_code_hash)?;
+    let config = read_config(&deps.storage)?;
+
+    let liquidity_token = query_liquidity_token(&deps, &pair_contract, &config.pair_code_hash)?;
     store_pair(
         &mut deps.storage,
         &PairInfoRaw {

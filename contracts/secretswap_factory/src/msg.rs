@@ -11,6 +11,7 @@ pub struct InitMsg {
     pub token_code_id: u64,
     pub init_hook: Option<InitHook>,
     pub token_code_hash: String,
+    pub pair_code_hash: String,
     pub prng_seed: Binary,
 }
 
@@ -22,6 +23,7 @@ pub enum HandleMsg {
         owner: Option<HumanAddr>,
         token_code_id: Option<u64>,
         pair_code_id: Option<u64>,
+        pair_code_hash: Option<String>,
         token_code_hash: Option<String>,
     },
     /// CreatePair instantiates pair contract

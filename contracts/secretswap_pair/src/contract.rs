@@ -34,6 +34,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             msg.asset_infos[0].to_raw(&deps)?,
             msg.asset_infos[1].to_raw(&deps)?,
         ],
+        token_code_hash: msg.token_code_hash.clone(),
     };
 
     store_pair_info(&mut deps.storage, &pair_info)?;
@@ -149,7 +150,11 @@ pub fn receive_cw20<S: Storage, A: Api, Q: Querier>(
                     env,
                     from,
                     Asset {
-                        info: AssetInfo::Token { contract_addr },
+                        info: AssetInfo::Token {
+                            contract_addr,
+                            token_code_hash: Default::default(),
+                            viewing_key: Default::default(),
+                        },
                         amount,
                     },
                     belief_price,
@@ -253,7 +258,7 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
     assert_slippage_tolerance(&slippage_tolerance, &deposits, &pools)?;
 
     let liquidity_token = deps.api.human_address(&pair_info.liquidity_token)?;
-    let total_share = query_supply(&deps, &liquidity_token)?;
+    let total_share = query_supply(&deps, &liquidity_token, &pair_info.token_code_hash)?;
     let share = if total_share == Uint128::zero() {
         // Initial share = collateral amount
         Uint128((deposits[0].u128() * deposits[1].u128()).integer_sqrt())
@@ -301,7 +306,7 @@ pub fn try_withdraw_liquidity<S: Storage, A: Api, Q: Querier>(
     let liquidity_addr: HumanAddr = deps.api.human_address(&pair_info.liquidity_token)?;
 
     let pools: [Asset; 2] = pair_info.query_pools(&deps, &env.contract.address)?;
-    let total_share: Uint128 = query_supply(&deps, &liquidity_addr)?;
+    let total_share: Uint128 = query_supply(&deps, &liquidity_addr, &pair_info.token_code_hash)?;
 
     let share_ratio: Decimal = Decimal::from_ratio(amount, total_share);
     let refund_assets: Vec<Asset> = pools
@@ -454,8 +459,11 @@ pub fn query_pool<S: Storage, A: Api, Q: Querier>(
     let pair_info: PairInfoRaw = read_pair_info(&deps.storage)?;
     let contract_addr = deps.api.human_address(&pair_info.contract_addr)?;
     let assets: [Asset; 2] = pair_info.query_pools(&deps, &contract_addr)?;
-    let total_share: Uint128 =
-        query_supply(&deps, &deps.api.human_address(&pair_info.liquidity_token)?)?;
+    let total_share: Uint128 = query_supply(
+        &deps,
+        &deps.api.human_address(&pair_info.liquidity_token)?,
+        &pair_info.token_code_hash,
+    )?;
 
     let resp = PoolResponse {
         assets,

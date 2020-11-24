@@ -1,8 +1,8 @@
 use std::fmt;
 
 use cosmwasm_std::{
-    to_binary, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Decimal, Env, Extern, HumanAddr,
-    Querier, StdError, StdResult, Storage, Uint128, WasmMsg,
+    to_binary, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Env, Extern, HumanAddr, Querier,
+    StdError, StdResult, Storage, Uint128, WasmMsg,
 };
 use schemars::JsonSchema;
 use secret_toolkit::snip20::HandleMsg;
@@ -31,7 +31,7 @@ impl Asset {
 
     pub fn compute_tax<S: Storage, A: Api, Q: Querier>(
         &self,
-        deps: &Extern<S, A, Q>,
+        _deps: &Extern<S, A, Q>,
     ) -> StdResult<Uint128> {
         // let amount = self.amount;
         // if let AssetInfo::NativeToken { denom } = &self.info {

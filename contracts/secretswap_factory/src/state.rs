@@ -14,6 +14,7 @@ pub struct Config {
     pub pair_code_id: u64,
     pub token_code_id: u64,
     pub token_code_hash: String,
+    pub pair_code_hash: String,
     pub prng_seed: Vec<u8>,
 }
 

@@ -1,9 +1,8 @@
 use cosmwasm_std::{
-    from_binary, to_binary, AllBalanceResponse, Api, BalanceResponse, BankQuery, Binary, Coin,
-    Extern, HumanAddr, Querier, QueryRequest, StdError, StdResult, Storage, Uint128, WasmQuery,
+    to_binary, AllBalanceResponse, Api, BalanceResponse, BankQuery, Coin, Extern, HumanAddr,
+    Querier, QueryRequest, StdError, StdResult, Storage, Uint128, WasmQuery,
 };
-use cosmwasm_storage::to_length_prefixed;
-use secret_toolkit::snip20::{balance_query, token_info_query, QueryMsg, TokenInfoResponse};
+use secret_toolkit::snip20::{balance_query, token_info_query};
 
 use crate::asset::{Asset, AssetInfo, PairInfo};
 use crate::msg::{FactoryQueryMsg, PairQueryMsg, ReverseSimulationResponse, SimulationResponse};
@@ -78,12 +77,12 @@ pub fn query_supply<S: Storage, A: Api, Q: Querier>(
     Ok(token_info.total_supply.unwrap())
 }
 
-#[inline]
-fn concat(namespace: &[u8], key: &[u8]) -> Vec<u8> {
-    let mut k = namespace.to_vec();
-    k.extend_from_slice(key);
-    k
-}
+// #[inline]
+// fn concat(namespace: &[u8], key: &[u8]) -> Vec<u8> {
+//     let mut k = namespace.to_vec();
+//     k.extend_from_slice(key);
+//     k
+// }
 
 pub fn query_pair_info<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
