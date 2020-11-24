@@ -19,7 +19,7 @@ pub struct Config {
     pub prng_seed: Vec<u8>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default, JsonSchema)]
 pub struct PairTracker(pub Vec<Vec<u8>>);
 
 pub fn store_pair_tracker<S: Storage>(storage: &mut S, data: &PairTracker) -> StdResult<()> {
@@ -42,7 +42,7 @@ pub fn store_pair<S: Storage>(storage: &mut S, data: &PairInfoRaw) -> StdResult<
     let mut asset_infos = data.asset_infos.clone().to_vec();
     asset_infos.sort_by(|a, b| a.as_bytes().cmp(&b.as_bytes()));
 
-    let mut tracker = read_pair_tracker(storage)?;
+    let mut tracker = read_pair_tracker(storage).unwrap_or_default();
 
     let key = &[asset_infos[0].as_bytes(), asset_infos[1].as_bytes()].concat();
 

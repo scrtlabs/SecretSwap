@@ -891,9 +891,12 @@ fn is_valid_name(name: &str) -> bool {
 
 fn is_valid_symbol(symbol: &str) -> bool {
     let len = symbol.len();
-    let len_is_valid = 3 <= len && len <= 6;
+    let len_is_valid = 3 <= len && len <= 12;
 
-    len_is_valid && symbol.bytes().all(|byte| b'A' <= byte && byte <= b'Z')
+    len_is_valid
+        && symbol
+            .bytes()
+            .all(|byte| (b'A' <= byte && byte <= b'Z') || (b'a' <= byte && byte <= b'z'))
 }
 
 #[cfg(test)]

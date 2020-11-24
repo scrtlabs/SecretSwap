@@ -99,7 +99,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     messages.extend(vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
         code_id: msg.token_code_id,
         msg: to_binary(&TokenInitMsg {
-            name: "terraswap liquidity token".to_string(),
+            name: "secretswap liquidity token".to_string(),
             symbol: "uLP".to_string(),
             decimals: 6,
             initial_balances: None,
