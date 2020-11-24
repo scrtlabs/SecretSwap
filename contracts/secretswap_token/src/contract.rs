@@ -1,10 +1,6 @@
 /// This contract implements SNIP-20 standard:
 /// https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md
-use cosmwasm_std::{
-    log, to_binary, Api, Binary, CanonicalAddr, CosmosMsg, Env, Extern,
-    HandleResponse, HumanAddr, InitResponse, Querier, QueryResult, ReadonlyStorage, StdError,
-    StdResult, Storage, Uint128,
-};
+use cosmwasm_std::{log, to_binary, Api, Binary, CanonicalAddr, CosmosMsg, Env, Extern, HandleResponse, HumanAddr, InitResponse, Querier, QueryResult, ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg};
 
 use crate::msg::{
     space_pad, ContractStatusLevel, HandleAnswer, HandleMsg, InitMsg, QueryAnswer, QueryMsg,
@@ -78,7 +74,19 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     config.set_total_supply(total_supply);
     config.set_contract_status(ContractStatusLevel::NormalRun);
 
-    Ok(InitResponse::default())
+    if let Some(hook) = msg.init_hook {
+        Ok(InitResponse {
+            messages: vec![CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: hook.contract_addr,
+                callback_code_hash: hook.code_hash,
+                msg: hook.msg,
+                send: vec![],
+            })],
+            log: vec![],
+        })
+    } else {
+        Ok(InitResponse::default())
+    }
 }
 
 fn pad_response(response: StdResult<HandleResponse>) -> StdResult<HandleResponse> {

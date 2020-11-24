@@ -14,6 +14,7 @@ pub struct Config {
     pub owner: CanonicalAddr,
     pub pair_code_id: u64,
     pub token_code_id: u64,
+    pub token_code_hash: String,
 }
 
 pub fn store_config<S: Storage>(storage: &mut S, data: &Config) -> StdResult<()> {

@@ -19,6 +19,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         owner: deps.api.canonical_address(&env.message.sender)?,
         token_code_id: msg.token_code_id,
         pair_code_id: msg.pair_code_id,
+        token_code_hash: msg.token_code_hash
     };
 
     store_config(&mut deps.storage, &config)?;
@@ -27,7 +28,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     if let Some(hook) = msg.init_hook {
         messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: hook.contract_addr,
-            callback_code_hash: "".to_string(),
+            callback_code_hash: hook.code_hash,
             msg: hook.msg,
             send: vec![],
         }));
@@ -49,7 +50,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             owner,
             token_code_id,
             pair_code_id,
-        } => try_update_config(deps, env, owner, token_code_id, pair_code_id),
+            token_code_hash,
+        } => try_update_config(deps, env, owner, token_code_id, pair_code_id, token_code_hash),
         HandleMsg::CreatePair {
             asset_infos,
             init_hook,
@@ -65,6 +67,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     owner: Option<HumanAddr>,
     token_code_id: Option<u64>,
     pair_code_id: Option<u64>,
+    token_code_hash: Option<String>
 ) -> HandleResult {
     let mut config: Config = read_config(&deps.storage)?;
 
@@ -85,11 +88,15 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
         config.pair_code_id = pair_code_id;
     }
 
+    if let Some(token_code_hash) = token_code_hash {
+        config.token_code_hash = token_code_hash;
+    }
+
     store_config(&mut deps.storage, &config)?;
 
     Ok(HandleResponse {
         messages: vec![],
-        log: vec![log("action", "update_config")],
+        log: vec![],
         data: None,
     })
 }
@@ -120,18 +127,20 @@ pub fn try_create_pair<S: Storage, A: Api, Q: Querier>(
     let mut messages: Vec<CosmosMsg> = vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
         code_id: config.pair_code_id,
         send: vec![],
-        label: "Hello".to_string(),
+        label: format!("{}-{}-pair", asset_infos[0], asset_infos[1]),
         msg: to_binary(&PairInitMsg {
             asset_infos: asset_infos.clone(),
             token_code_id: config.token_code_id,
+            token_code_hash: config.token_code_hash.clone(),
             init_hook: Some(InitHook {
                 contract_addr: env.contract.address,
+                code_hash: env.contract_code_hash,
                 msg: to_binary(&HandleMsg::Register {
                     asset_infos: asset_infos.clone(),
                 })?,
             }),
         })?,
-        callback_code_hash: "".to_string()
+        callback_code_hash: config.token_code_hash
     })];
 
     if let Some(hook) = init_hook {
@@ -139,7 +148,7 @@ pub fn try_create_pair<S: Storage, A: Api, Q: Querier>(
             contract_addr: hook.contract_addr,
             msg: hook.msg,
             send: vec![],
-            callback_code_hash: "".to_string()
+            callback_code_hash: hook.code_hash
         }));
     }
 
@@ -166,7 +175,10 @@ pub fn try_register<S: Storage, A: Api, Q: Querier>(
     }
 
     let pair_contract = env.message.sender;
-    let liquidity_token = query_liquidity_token(&deps, &pair_contract)?;
+
+    let config = read_config(&deps.storage)?;
+
+    let liquidity_token = query_liquidity_token(&deps, &pair_contract, &config.token_code_hash)?;
     store_pair(
         &mut deps.storage,
         &PairInfoRaw {

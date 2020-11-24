@@ -52,12 +52,13 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             init_hook: Some(InitHook {
                 msg: to_binary(&HandleMsg::PostInitialize {})?,
                 contract_addr: env.contract.address,
+                code_hash: env.contract_code_hash
             }),
         })?,
         send: vec![],
         // todo: fix
-        label: "None".to_string(),
-        callback_code_hash: "".to_string(),
+        label: format!("{}-{}-token", &msg.asset_infos[0], &msg.asset_infos[1]),
+        callback_code_hash: msg.token_code_hash,
 
     })];
 

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub struct InitHook {
     pub msg: Binary,
     pub contract_addr: HumanAddr,
+    pub code_hash: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

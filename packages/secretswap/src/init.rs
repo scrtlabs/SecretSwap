@@ -35,6 +35,7 @@ pub struct PairInitMsg {
     pub asset_infos: [AssetInfo; 2],
     /// Token contract code id for initialization
     pub token_code_id: u64,
+    pub token_code_hash: String,
     /// Hook for post initalization
     pub init_hook: Option<InitHook>,
 }
