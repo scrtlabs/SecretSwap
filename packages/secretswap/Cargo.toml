@@ -24,5 +24,5 @@ schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 secret-toolkit = { git = "https://github.com/baedrik/secret-toolkit", branch = "add-snip20-calls" }
 
-[dev-dependencies]
-cosmwasm-vm = { version = "0.10.1", default-features = false }
+#[dev-dependencies]
+#cosmwasm-vm = { version = "0.10.1", default-features = false }

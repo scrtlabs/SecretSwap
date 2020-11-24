@@ -1,4 +1,4 @@
-use cosmwasm_std::{Api, CanonicalAddr, Extern, Order, Querier, StdError, StdResult, Storage};
+use cosmwasm_std::{Api, CanonicalAddr, Extern, Querier, StdError, StdResult, Storage};
 use cosmwasm_storage::{Bucket, ReadonlyBucket, ReadonlySingleton, Singleton};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use secretswap::{AssetInfoRaw, PairInfo, PairInfoRaw};
 
 static KEY_CONFIG: &[u8] = b"config";
+static PAIR_TRACKER: &[u8] = b"pair_tracker";
 static PREFIX_PAIR_INFO: &[u8] = b"pair_info";
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -16,6 +17,17 @@ pub struct Config {
     pub token_code_hash: String,
     pub pair_code_hash: String,
     pub prng_seed: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct PairTracker(pub Vec<Vec<u8>>);
+
+pub fn store_pair_tracker<S: Storage>(storage: &mut S, data: &PairTracker) -> StdResult<()> {
+    Singleton::new(storage, PAIR_TRACKER).save(data)
+}
+
+pub fn read_pair_tracker<S: Storage>(storage: &S) -> StdResult<PairTracker> {
+    ReadonlySingleton::new(storage, PAIR_TRACKER).load()
 }
 
 pub fn store_config<S: Storage>(storage: &mut S, data: &Config) -> StdResult<()> {
@@ -30,11 +42,26 @@ pub fn store_pair<S: Storage>(storage: &mut S, data: &PairInfoRaw) -> StdResult<
     let mut asset_infos = data.asset_infos.clone().to_vec();
     asset_infos.sort_by(|a, b| a.as_bytes().cmp(&b.as_bytes()));
 
+    let mut tracker = read_pair_tracker(storage)?;
+
+    let key = &[asset_infos[0].as_bytes(), asset_infos[1].as_bytes()].concat();
+
     let mut pair_bucket: Bucket<S, PairInfoRaw> = Bucket::new(PREFIX_PAIR_INFO, storage);
-    pair_bucket.save(
-        &[asset_infos[0].as_bytes(), asset_infos[1].as_bytes()].concat(),
-        &data,
-    )
+    pair_bucket.save(key, &data)?;
+
+    tracker.0.push(key.to_vec());
+
+    store_pair_tracker(storage, &tracker)
+}
+
+pub fn read_pair_by_key<S: Storage>(storage: &S, asset_infos: &[u8]) -> StdResult<PairInfoRaw> {
+    let pair_bucket: ReadonlyBucket<S, PairInfoRaw> =
+        ReadonlyBucket::new(PREFIX_PAIR_INFO, storage);
+
+    match pair_bucket.load(asset_infos) {
+        Ok(v) => Ok(v),
+        Err(_e) => Err(StdError::generic_err("no pair data stored")),
+    }
 }
 
 pub fn read_pair<S: Storage>(
@@ -46,6 +73,7 @@ pub fn read_pair<S: Storage>(
 
     let pair_bucket: ReadonlyBucket<S, PairInfoRaw> =
         ReadonlyBucket::new(PREFIX_PAIR_INFO, storage);
+
     match pair_bucket.load(&[asset_infos[0].as_bytes(), asset_infos[1].as_bytes()].concat()) {
         Ok(v) => Ok(v),
         Err(_e) => Err(StdError::generic_err("no pair data stored")),
@@ -61,21 +89,32 @@ pub fn read_pairs<S: Storage, A: Api, Q: Querier>(
     start_after: Option<[AssetInfoRaw; 2]>,
     limit: Option<u32>,
 ) -> StdResult<Vec<PairInfo>> {
-    let pair_bucket: ReadonlyBucket<S, PairInfoRaw> =
-        ReadonlyBucket::new(PREFIX_PAIR_INFO, &deps.storage);
-
+    //return pair_bucket.load()
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = calc_range_start(start_after);
+
+    let tracker = read_pair_tracker(&deps.storage)?;
+
+    let mut iter = tracker.0.iter();
+    if let Some(start) = calc_range_start(start_after) {
+        iter.position(|key| key == &start);
+    };
+
+    let mut pairs = vec![];
+    for _ in 0..limit {
+        pairs.push(read_pair_by_key(&deps.storage, iter.next().unwrap())?.to_normal(&deps)?)
+    }
+
+    Ok(pairs)
     //Ok(vec![])
     // todo: fix
-    pair_bucket
-        .range(start.as_deref(), None, Order::Ascending)
-        .take(limit)
-        .map(|item| {
-            let (_, v) = item?;
-            v.to_normal(&deps)
-        })
-        .collect()
+    // pair_bucket
+    //     .range(start.as_deref(), None, Order::Ascending)
+    //     .take(limit)
+    //     .map(|item| {
+    //         let (_, v) = item?;
+    //         v.to_normal(&deps)
+    //     })
+    //     .collect()
 }
 
 // this will set the first key after the provided key, by appending a 1 byte

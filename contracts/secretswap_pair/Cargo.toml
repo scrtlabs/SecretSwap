@@ -43,8 +43,8 @@ cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", tag = "
 cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.0" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-
-[dev-dependencies]
-cosmwasm-vm = { version = "0.10.1", default-features = false }
-cosmwasm-schema = "0.10.1"
-# terra-cosmwasm = { version = "1.2.2" }
+base64 = "0.13.0"
+#[dev-dependencies]
+#cosmwasm-vm = { version = "0.10.1", default-features = false }
+#cosmwasm-schema = "0.10.1"
+## terra-cosmwasm = { version = "1.2.2" }

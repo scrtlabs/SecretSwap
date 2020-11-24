@@ -7,17 +7,21 @@ use cosmwasm_std::{
 };
 use integer_sqrt::IntegerSquareRoot;
 //use ::{Cw20HandleMsg, Cw20ReceiveMsg, MinterResponse};
+use secret_toolkit::snip20::set_viewing_key_msg;
 use secret_toolkit::snip20::HandleMsg as S20HandleMsg;
 
 use secretswap::{
-    query_supply, Asset, AssetInfo, InitHook, PairInfo, PairInfoRaw, PairInitMsg, TokenInitMsg,
+    query_supply, Asset, AssetInfo, AssetInfoRaw, InitHook, PairInfo, PairInfoRaw, PairInitMsg,
+    TokenInitMsg,
 };
 
 use crate::math::{decimal_multiplication, decimal_subtraction, reverse_decimal};
 use crate::msg::{
     Cw20HookMsg, HandleMsg, PoolResponse, QueryMsg, ReverseSimulationResponse, SimulationResponse,
 };
+
 use crate::state::{read_pair_info, store_pair_info};
+use secret_toolkit::crypto::Prng;
 
 /// Commission rate == 0.3%
 const COMMISSION_RATE: &str = "0.003";
@@ -27,20 +31,72 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: PairInitMsg,
 ) -> StdResult<InitResponse> {
+    // create viewing key
+    let mut prng = Prng::new(&msg.prng_seed.0, &env.block.time.to_be_bytes());
+    let vk = prng.rand_bytes();
+    let vk_str = base64::encode(vk);
+
+    let mut asset0 = msg.asset_infos[0].to_raw(&deps)?;
+    let mut asset1 = msg.asset_infos[1].to_raw(&deps)?;
+
+    /* append set viewing key messages and store viewing keys */
+    let mut messages = vec![];
+    match &msg.asset_infos[0] {
+        AssetInfo::Token {
+            contract_addr,
+            token_code_hash,
+            ..
+        } => {
+            messages.push(set_viewing_key_msg(
+                vk_str.clone(),
+                None,
+                256,
+                msg.token_code_hash.clone(),
+                contract_addr.clone(),
+            )?);
+            asset0 = AssetInfoRaw::Token {
+                contract_addr: deps.api.canonical_address(&contract_addr)?,
+                token_code_hash: token_code_hash.clone(),
+                viewing_key: vk_str.clone(),
+            };
+        }
+        _ => {}
+    }
+    match &msg.asset_infos[1] {
+        AssetInfo::Token {
+            contract_addr,
+            token_code_hash,
+            ..
+        } => {
+            messages.push(set_viewing_key_msg(
+                vk_str.clone(),
+                None,
+                256,
+                token_code_hash.clone(),
+                contract_addr.clone(),
+            )?);
+            asset1 = AssetInfoRaw::Token {
+                contract_addr: deps.api.canonical_address(&contract_addr)?,
+                token_code_hash: token_code_hash.clone(),
+                viewing_key: vk_str.clone(),
+            };
+        }
+        _ => {}
+    }
+
     let pair_info: &PairInfoRaw = &PairInfoRaw {
         contract_addr: deps.api.canonical_address(&env.contract.address)?,
         liquidity_token: CanonicalAddr::default(),
-        asset_infos: [
-            msg.asset_infos[0].to_raw(&deps)?,
-            msg.asset_infos[1].to_raw(&deps)?,
-        ],
+        asset_infos: [asset0, asset1],
         token_code_hash: msg.token_code_hash.clone(),
     };
+
+    // create viewing keys
 
     store_pair_info(&mut deps.storage, &pair_info)?;
 
     // Create LP token
-    let mut messages: Vec<CosmosMsg> = vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
+    messages.extend(vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
         code_id: msg.token_code_id,
         msg: to_binary(&TokenInitMsg {
             name: "terraswap liquidity token".to_string(),
@@ -58,15 +114,14 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             }),
         })?,
         send: vec![],
-        // todo: fix
         label: format!("{}-{}-token", &msg.asset_infos[0], &msg.asset_infos[1]),
         callback_code_hash: msg.token_code_hash,
-    })];
+    })]);
 
     if let Some(hook) = msg.init_hook {
         messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: hook.contract_addr,
-            callback_code_hash: "".to_string(),
+            callback_code_hash: hook.code_hash,
             msg: hook.msg,
             send: vec![],
         }));
