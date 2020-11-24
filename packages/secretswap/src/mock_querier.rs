@@ -1,15 +1,17 @@
+use std::collections::HashMap;
+
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     from_binary, from_slice, to_binary, Api, CanonicalAddr, Coin, Decimal, Extern, HumanAddr,
     Querier, QuerierResult, QueryRequest, SystemError, Uint128, WasmQuery,
 };
 use cosmwasm_storage::to_length_prefixed;
-use std::collections::HashMap;
+
+use cw20::TokenInfoResponse;
+use terra_cosmwasm::{TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute};
 
 use crate::asset::PairInfo;
 use crate::msg::FactoryQueryMsg;
-use cw20::TokenInfoResponse;
-use terra_cosmwasm::{TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute};
 
 /// mock_dependencies is a drop-in replacement for cosmwasm_std::testing::mock_dependencies
 /// this uses our CustomQuerier.
@@ -122,7 +124,7 @@ impl Querier for WasmMockQuerier {
                 return Err(SystemError::InvalidRequest {
                     error: format!("Parsing query request: {}", e),
                     request: bin_request.into(),
-                })
+                });
             }
         };
         self.handle_query(&request)
@@ -188,7 +190,7 @@ impl WasmMockQuerier {
                                     contract_addr
                                 ),
                                 request: key.into(),
-                            })
+                            });
                         }
                     };
 
@@ -218,7 +220,7 @@ impl WasmMockQuerier {
                             return Err(SystemError::InvalidRequest {
                                 error: format!("Parsing query request: {}", e),
                                 request: key.into(),
-                            })
+                            });
                         }
                     };
                     let balance = match balances.get(&address) {
@@ -227,7 +229,7 @@ impl WasmMockQuerier {
                             return Err(SystemError::InvalidRequest {
                                 error: "Balance not found".to_string(),
                                 request: key.into(),
-                            })
+                            });
                         }
                     };
                     Ok(to_binary(&to_binary(&balance).unwrap()))

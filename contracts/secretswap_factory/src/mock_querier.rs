@@ -1,10 +1,11 @@
+use std::collections::HashMap;
+
 use cosmwasm_std::testing::{MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     from_slice, to_binary, Api, Coin, Empty, Extern, HumanAddr, Querier, QuerierResult,
     QueryRequest, SystemError, WasmQuery,
 };
 use cosmwasm_storage::to_length_prefixed;
-use std::collections::HashMap;
 
 use secretswap::{AssetInfoRaw, PairInfo, PairInfoRaw};
 
@@ -64,7 +65,7 @@ impl Querier for WasmMockQuerier {
                 return Err(SystemError::InvalidRequest {
                     error: format!("Parsing query request: {}", e),
                     request: bin_request.into(),
-                })
+                });
             }
         };
         self.handle_query(&request)
@@ -86,7 +87,7 @@ impl WasmMockQuerier {
                                 return Err(SystemError::InvalidRequest {
                                     error: format!("PairInfo is not found for {}", contract_addr),
                                     request: key.into(),
-                                })
+                                });
                             }
                         };
 

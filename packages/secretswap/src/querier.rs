@@ -1,9 +1,12 @@
-use crate::asset::{Asset, AssetInfo, PairInfo};
-use crate::msg::{FactoryQueryMsg, PairQueryMsg, ReverseSimulationResponse, SimulationResponse};
-
-use cosmwasm_std::{from_binary, to_binary, AllBalanceResponse, Api, BalanceResponse, BankQuery, Binary, Coin, Extern, HumanAddr, Querier, QueryRequest, StdResult, Storage, Uint128, WasmQuery, StdError};
+use cosmwasm_std::{
+    from_binary, to_binary, AllBalanceResponse, Api, BalanceResponse, BankQuery, Binary, Coin,
+    Extern, HumanAddr, Querier, QueryRequest, StdError, StdResult, Storage, Uint128, WasmQuery,
+};
 use cosmwasm_storage::to_length_prefixed;
 use secret_toolkit::snip20::TokenInfoResponse;
+
+use crate::asset::{Asset, AssetInfo, PairInfo};
+use crate::msg::{FactoryQueryMsg, PairQueryMsg, ReverseSimulationResponse, SimulationResponse};
 
 pub fn query_balance<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
@@ -46,8 +49,7 @@ pub fn query_token_balance<S: Storage, A: Api, Q: Querier>(
                 (deps.api.canonical_address(&account_addr)?).as_slice(),
             )),
 
-            callback_code_hash: "".to_string()
-
+            callback_code_hash: "".to_string(),
         }))
         .unwrap_or_else(|_| to_binary(&Uint128::zero()).unwrap());
 
@@ -63,13 +65,15 @@ pub fn query_supply<S: Storage, A: Api, Q: Querier>(
         contract_addr: HumanAddr::from(contract_addr),
         key: Binary::from(to_length_prefixed(b"token_info")),
 
-        callback_code_hash: "".to_string()
+        callback_code_hash: "".to_string(),
     }))?;
 
     let token_info: TokenInfoResponse = from_binary(&res)?;
 
     if token_info.token_info.total_supply.is_none() {
-        return Err(StdError::generic_err("Tried to query a token with unavailable supply"))
+        return Err(StdError::generic_err(
+            "Tried to query a token with unavailable supply",
+        ));
     }
 
     Ok(token_info.token_info.total_supply.unwrap())

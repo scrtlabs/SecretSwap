@@ -1,7 +1,7 @@
+use cosmwasm_std::{Binary, HumanAddr};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::HumanAddr;
 use secretswap::{AssetInfo, InitHook, PairInfo};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -11,6 +11,7 @@ pub struct InitMsg {
     pub token_code_id: u64,
     pub init_hook: Option<InitHook>,
     pub token_code_hash: String,
+    pub prng_seed: Binary,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -54,10 +55,6 @@ pub struct ConfigResponse {
     pub pair_code_id: u64,
     pub token_code_id: u64,
 }
-
-/// We currently take no arguments for migrations
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct MigrateMsg {}
 
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

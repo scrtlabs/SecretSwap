@@ -5,7 +5,7 @@ use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 use cosmwasm_std::HandleResponse;
 
 use secretswap::PairInfo;
-use secretswap_factory::msg::{ConfigResponse, HandleMsg, InitMsg, QueryMsg, PairsResponse};
+use secretswap_factory::msg::{ConfigResponse, HandleMsg, InitMsg, PairsResponse, QueryMsg};
 
 fn main() {
     let mut out_dir = current_dir().unwrap();

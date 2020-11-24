@@ -1,27 +1,27 @@
-use crate::math::{decimal_multiplication, decimal_subtraction, reverse_decimal};
-use crate::msg::{
-    Cw20HookMsg, HandleMsg, MigrateMsg, PoolResponse, QueryMsg, ReverseSimulationResponse,
-    SimulationResponse,
-};
-use crate::state::{read_pair_info, store_pair_info};
+use std::str::FromStr;
 
 use cosmwasm_std::{
     from_binary, log, to_binary, Api, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal, Env, Extern,
-    HandleResponse, HandleResult, HumanAddr, InitResponse, MigrateResponse, MigrateResult, Querier,
-    StdError, StdResult, Storage, Uint128, WasmMsg,
+    HandleResponse, HandleResult, HumanAddr, InitResponse, Querier, StdError, StdResult, Storage,
+    Uint128, WasmMsg,
 };
-
-//use ::{Cw20HandleMsg, Cw20ReceiveMsg, MinterResponse};
-use secret_toolkit::snip20::{HandleMsg as S20HandleMsg};
-
 use integer_sqrt::IntegerSquareRoot;
-use std::str::FromStr;
+//use ::{Cw20HandleMsg, Cw20ReceiveMsg, MinterResponse};
+use secret_toolkit::snip20::HandleMsg as S20HandleMsg;
+
 use secretswap::{
-    query_supply, Asset, AssetInfo, InitHook, PairInfo, PairInfoRaw, PairInitMsg, TokenInitMsg
+    query_supply, Asset, AssetInfo, InitHook, PairInfo, PairInfoRaw, PairInitMsg, TokenInitMsg,
 };
+
+use crate::math::{decimal_multiplication, decimal_subtraction, reverse_decimal};
+use crate::msg::{
+    Cw20HookMsg, HandleMsg, PoolResponse, QueryMsg, ReverseSimulationResponse, SimulationResponse,
+};
+use crate::state::{read_pair_info, store_pair_info};
 
 /// Commission rate == 0.3%
 const COMMISSION_RATE: &str = "0.003";
+
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
@@ -45,21 +45,21 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             name: "terraswap liquidity token".to_string(),
             symbol: "uLP".to_string(),
             decimals: 6,
-            initial_balances: vec![],
+            initial_balances: None,
+            prng_seed: msg.prng_seed,
             admin: Some(env.contract.address.clone()),
 
             // todo: figure out if we want to do this differently
             init_hook: Some(InitHook {
                 msg: to_binary(&HandleMsg::PostInitialize {})?,
                 contract_addr: env.contract.address,
-                code_hash: env.contract_code_hash
+                code_hash: env.contract_code_hash,
             }),
         })?,
         send: vec![],
         // todo: fix
         label: format!("{}-{}-token", &msg.asset_infos[0], &msg.asset_infos[1]),
         callback_code_hash: msg.token_code_hash,
-
     })];
 
     if let Some(hook) = msg.init_hook {
@@ -236,7 +236,7 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
                     owner: env.message.sender.clone(),
                     recipient: env.contract.address.clone(),
                     amount: deposits[i],
-                    padding: None
+                    padding: None,
                 })?,
                 send: vec![],
             }));
@@ -275,7 +275,7 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
         msg: to_binary(&S20HandleMsg::Mint {
             recipient: env.message.sender,
             amount: share,
-            padding: None
+            padding: None,
         })?,
         send: vec![],
         callback_code_hash: "".to_string(),
@@ -327,7 +327,10 @@ pub fn try_withdraw_liquidity<S: Storage, A: Api, Q: Querier>(
             // burn liquidity token
             CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: deps.api.human_address(&pair_info.liquidity_token)?,
-                msg: to_binary(&S20HandleMsg::Burn { amount, padding: None })?,
+                msg: to_binary(&S20HandleMsg::Burn {
+                    amount,
+                    padding: None,
+                })?,
                 send: vec![],
                 callback_code_hash: "".to_string(),
             }),
@@ -635,12 +638,4 @@ fn assert_slippage_tolerance(
     }
 
     Ok(())
-}
-
-pub fn migrate<S: Storage, A: Api, Q: Querier>(
-    _deps: &mut Extern<S, A, Q>,
-    _env: Env,
-    _msg: MigrateMsg,
-) -> MigrateResult {
-    Ok(MigrateResponse::default())
 }

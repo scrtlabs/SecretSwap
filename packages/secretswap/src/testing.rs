@@ -1,12 +1,13 @@
+use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
+use cosmwasm_std::{to_binary, BankMsg, Coin, CosmosMsg, Decimal, HumanAddr, Uint128, WasmMsg};
+
+use cw20::Cw20HandleMsg;
+
 use crate::asset::{Asset, AssetInfo, PairInfo};
 use crate::mock_querier::mock_dependencies;
 use crate::querier::{
     query_all_balances, query_balance, query_pair_info, query_supply, query_token_balance,
 };
-
-use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
-use cosmwasm_std::{to_binary, BankMsg, Coin, CosmosMsg, Decimal, HumanAddr, Uint128, WasmMsg};
-use cw20::Cw20HandleMsg;
 
 #[test]
 fn token_balance_querier() {
@@ -42,7 +43,7 @@ fn balance_querier() {
         query_balance(
             &deps,
             &HumanAddr::from(MOCK_CONTRACT_ADDR),
-            "uusd".to_string()
+            "uusd".to_string(),
         )
         .unwrap(),
         Uint128(200u128)
@@ -66,7 +67,7 @@ fn all_balances_querier() {
     );
 
     assert_eq!(
-        query_all_balances(&deps, &HumanAddr::from(MOCK_CONTRACT_ADDR),).unwrap(),
+        query_all_balances(&deps, &HumanAddr::from(MOCK_CONTRACT_ADDR)).unwrap(),
         vec![
             Coin {
                 denom: "uusd".to_string(),
@@ -217,7 +218,7 @@ fn test_asset() {
             .into_msg(
                 &deps,
                 HumanAddr::from("asset0000"),
-                HumanAddr::from("addr0000")
+                HumanAddr::from("addr0000"),
             )
             .unwrap(),
         CosmosMsg::Wasm(WasmMsg::Execute {
@@ -236,7 +237,7 @@ fn test_asset() {
             .into_msg(
                 &deps,
                 HumanAddr::from(MOCK_CONTRACT_ADDR),
-                HumanAddr::from("addr0000")
+                HumanAddr::from("addr0000"),
             )
             .unwrap(),
         CosmosMsg::Bank(BankMsg::Send {
@@ -245,7 +246,7 @@ fn test_asset() {
             amount: vec![Coin {
                 denom: "uusd".to_string(),
                 amount: Uint128(121903u128),
-            }]
+            }],
         })
     );
 }

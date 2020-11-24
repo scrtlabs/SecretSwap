@@ -1,14 +1,14 @@
+use cosmwasm_std::testing::{mock_env, MOCK_CONTRACT_ADDR};
 use cosmwasm_std::{
     from_binary, log, to_binary, CanonicalAddr, CosmosMsg, HumanAddr, StdError, WasmMsg,
 };
+
+use secretswap::{AssetInfo, InitHook, PairInfo, PairInitMsg};
 
 use crate::contract::{handle, init, query};
 use crate::mock_querier::mock_dependencies;
 use crate::msg::{ConfigResponse, HandleMsg, InitMsg, PairsResponse, QueryMsg};
 use crate::state::read_pair;
-
-use cosmwasm_std::testing::{mock_env, MOCK_CONTRACT_ADDR};
-use secretswap::{AssetInfo, InitHook, PairInfo, PairInitMsg};
 
 #[test]
 fn proper_initialization() {
@@ -148,7 +148,7 @@ fn create_pair() {
                         asset_infos: asset_infos.clone()
                     })
                     .unwrap(),
-                })
+                }),
             })
             .unwrap(),
             code_id: 321u64,

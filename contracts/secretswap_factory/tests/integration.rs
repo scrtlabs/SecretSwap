@@ -185,7 +185,7 @@ fn create_pair() {
                         asset_infos: asset_infos.clone()
                     })
                     .unwrap(),
-                })
+                }),
             })
             .unwrap(),
             code_id: 321u64,

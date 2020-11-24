@@ -1,7 +1,6 @@
+use cosmwasm_std::{Binary, Decimal, HumanAddr, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use cosmwasm_std::{Decimal, HumanAddr, Uint128, Binary};
 
 use secretswap::Asset;
 
@@ -72,7 +71,3 @@ pub struct ReverseSimulationResponse {
     pub spread_amount: Uint128,
     pub commission_amount: Uint128,
 }
-
-/// We currently take no arguments for migrations
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct MigrateMsg {}

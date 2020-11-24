@@ -1,13 +1,14 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use crate::querier::{query_balance, query_token_balance};
 use cosmwasm_std::{
     to_binary, Api, BankMsg, CanonicalAddr, Coin, CosmosMsg, Decimal, Env, Extern, HumanAddr,
     Querier, StdError, StdResult, Storage, Uint128, WasmMsg,
 };
+use schemars::JsonSchema;
 use secret_toolkit::snip20::HandleMsg;
+use serde::{Deserialize, Serialize};
+
+use crate::querier::{query_balance, query_token_balance};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Asset {
@@ -21,7 +22,7 @@ impl fmt::Display for Asset {
     }
 }
 
-static DECIMAL_FRACTION: Uint128 = Uint128(1_000_000_000_000_000_000u128);
+//static DECIMAL_FRACTION: Uint128 = Uint128(1_000_000_000_000_000_000u128);
 
 impl Asset {
     pub fn is_native_token(&self) -> bool {
@@ -77,10 +78,14 @@ impl Asset {
         match &self.info {
             AssetInfo::Token { contract_addr } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: contract_addr.clone(),
-                
+
                 callback_code_hash: "".to_string(),
-                
-                msg: to_binary(&HandleMsg::Transfer { recipient, amount, padding: None })?,
+
+                msg: to_binary(&HandleMsg::Transfer {
+                    recipient,
+                    amount,
+                    padding: None,
+                })?,
                 send: vec![],
             })),
             AssetInfo::NativeToken { .. } => Ok(CosmosMsg::Bank(BankMsg::Send {

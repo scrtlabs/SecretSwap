@@ -1,25 +1,28 @@
 use cosmwasm_std::{
     log, to_binary, Api, Binary, CanonicalAddr, CosmosMsg, Env, Extern, HandleResponse,
-    HandleResult, HumanAddr, InitResponse, MigrateResponse, MigrateResult, Querier, StdError,
-    StdResult, Storage, WasmMsg,
+    HandleResult, HumanAddr, InitResponse, Querier, StdError, StdResult, Storage, WasmMsg,
 };
-
-use crate::msg::{ConfigResponse, HandleMsg, InitMsg, MigrateMsg, PairsResponse, QueryMsg};
-use crate::querier::query_liquidity_token;
-use crate::state::{read_config, read_pair, read_pairs, store_config, store_pair, Config};
+use secret_toolkit::crypto::{sha_256, Prng};
 
 use secretswap::{AssetInfo, InitHook, PairInfo, PairInfoRaw, PairInitMsg};
+
+use crate::msg::{ConfigResponse, HandleMsg, InitMsg, PairsResponse, QueryMsg};
+use crate::querier::query_liquidity_token;
+use crate::state::{read_config, read_pair, read_pairs, store_config, store_pair, Config};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
+    let prng_seed_hashed = sha_256(&msg.prng_seed.0);
+
     let config = Config {
         owner: deps.api.canonical_address(&env.message.sender)?,
         token_code_id: msg.token_code_id,
         pair_code_id: msg.pair_code_id,
-        token_code_hash: msg.token_code_hash
+        token_code_hash: msg.token_code_hash,
+        prng_seed: prng_seed_hashed.to_vec(),
     };
 
     store_config(&mut deps.storage, &config)?;
@@ -51,7 +54,14 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             token_code_id,
             pair_code_id,
             token_code_hash,
-        } => try_update_config(deps, env, owner, token_code_id, pair_code_id, token_code_hash),
+        } => try_update_config(
+            deps,
+            env,
+            owner,
+            token_code_id,
+            pair_code_id,
+            token_code_hash,
+        ),
         HandleMsg::CreatePair {
             asset_infos,
             init_hook,
@@ -67,7 +77,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     owner: Option<HumanAddr>,
     token_code_id: Option<u64>,
     pair_code_id: Option<u64>,
-    token_code_hash: Option<String>
+    token_code_hash: Option<String>,
 ) -> HandleResult {
     let mut config: Config = read_config(&deps.storage)?;
 
@@ -124,6 +134,9 @@ pub fn try_create_pair<S: Storage, A: Api, Q: Querier>(
         },
     )?;
 
+    let mut rng = Prng::new(&config.prng_seed, &env.block.time.to_be_bytes());
+    let pair_seed = rng.rand_bytes();
+
     let mut messages: Vec<CosmosMsg> = vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
         code_id: config.pair_code_id,
         send: vec![],
@@ -139,8 +152,9 @@ pub fn try_create_pair<S: Storage, A: Api, Q: Querier>(
                     asset_infos: asset_infos.clone(),
                 })?,
             }),
+            prng_seed: Binary::from(&pair_seed),
         })?,
-        callback_code_hash: config.token_code_hash
+        callback_code_hash: config.token_code_hash,
     })];
 
     if let Some(hook) = init_hook {
@@ -148,7 +162,7 @@ pub fn try_create_pair<S: Storage, A: Api, Q: Querier>(
             contract_addr: hook.contract_addr,
             msg: hook.msg,
             send: vec![],
-            callback_code_hash: hook.code_hash
+            callback_code_hash: hook.code_hash,
         }));
     }
 

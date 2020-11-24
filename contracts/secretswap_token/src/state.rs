@@ -5,15 +5,13 @@ use cosmwasm_std::{
     Api, CanonicalAddr, Coin, HumanAddr, ReadonlyStorage, StdError, StdResult, Storage, Uint128,
 };
 use cosmwasm_storage::{PrefixedStorage, ReadonlyPrefixedStorage};
-
-use secret_toolkit::storage::{AppendStore, AppendStoreMut, TypedStore, TypedStoreMut};
-
 use schemars::JsonSchema;
+use secret_toolkit::storage::{AppendStore, AppendStoreMut, TypedStore, TypedStoreMut};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 use crate::msg::{status_level_to_u8, u8_to_status_level, ContractStatusLevel};
 use crate::viewing_key::ViewingKey;
-use serde::de::DeserializeOwned;
 
 pub static CONFIG_KEY: &[u8] = b"config";
 pub const PREFIX_TXS: &[u8] = b"transfers";

@@ -1,9 +1,8 @@
+use cosmwasm_std::{Api, CanonicalAddr, Extern, Order, Querier, StdError, StdResult, Storage};
+use cosmwasm_storage::{Bucket, ReadonlyBucket, ReadonlySingleton, Singleton};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Api, CanonicalAddr, Extern, Querier, StdError, StdResult, Storage};
-
-use cosmwasm_storage::{Bucket, ReadonlyBucket, ReadonlySingleton, Singleton};
 use secretswap::{AssetInfoRaw, PairInfo, PairInfoRaw};
 
 static KEY_CONFIG: &[u8] = b"config";
@@ -15,6 +14,7 @@ pub struct Config {
     pub pair_code_id: u64,
     pub token_code_id: u64,
     pub token_code_hash: String,
+    pub prng_seed: Vec<u8>,
 }
 
 pub fn store_config<S: Storage>(storage: &mut S, data: &Config) -> StdResult<()> {
@@ -54,6 +54,7 @@ pub fn read_pair<S: Storage>(
 // settings for pagination
 const MAX_LIMIT: u32 = 30;
 const DEFAULT_LIMIT: u32 = 10;
+
 pub fn read_pairs<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     start_after: Option<[AssetInfoRaw; 2]>,
@@ -64,16 +65,16 @@ pub fn read_pairs<S: Storage, A: Api, Q: Querier>(
 
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
     let start = calc_range_start(start_after);
-    Ok(vec![])
+    //Ok(vec![])
     // todo: fix
-    // pair_bucket
-    //     .range(start.as_deref(), None)
-    //     .take(limit)
-    //     .map(|item| {
-    //         let (_, v) = item?;
-    //         v.to_normal(&deps)
-    //     })
-    //     .collect()
+    pair_bucket
+        .range(start.as_deref(), None, Order::Ascending)
+        .take(limit)
+        .map(|item| {
+            let (_, v) = item?;
+            v.to_normal(&deps)
+        })
+        .collect()
 }
 
 // this will set the first key after the provided key, by appending a 1 byte

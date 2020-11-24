@@ -1,6 +1,10 @@
 /// This contract implements SNIP-20 standard:
 /// https://github.com/SecretFoundation/SNIPs/blob/master/SNIP-20.md
-use cosmwasm_std::{log, to_binary, Api, Binary, CanonicalAddr, CosmosMsg, Env, Extern, HandleResponse, HumanAddr, InitResponse, Querier, QueryResult, ReadonlyStorage, StdError, StdResult, Storage, Uint128, WasmMsg};
+use cosmwasm_std::{
+    log, to_binary, Api, Binary, CanonicalAddr, CosmosMsg, Env, Extern, HandleResponse, HumanAddr,
+    InitResponse, Querier, QueryResult, ReadonlyStorage, StdError, StdResult, Storage, Uint128,
+    WasmMsg,
+};
 
 use crate::msg::{
     space_pad, ContractStatusLevel, HandleAnswer, HandleMsg, InitMsg, QueryAnswer, QueryMsg,
@@ -120,7 +124,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     }
 
     let response = match msg {
-
         // Base
         HandleMsg::Transfer {
             recipient, amount, ..
@@ -408,8 +411,6 @@ fn change_admin<S: Storage, A: Api, Q: Querier>(
         data: Some(to_binary(&HandleAnswer::ChangeAdmin { status: Success })?),
     })
 }
-
-
 
 pub fn try_set_key<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -895,22 +896,17 @@ fn is_valid_symbol(symbol: &str) -> bool {
     len_is_valid && symbol.bytes().all(|byte| b'A' <= byte && byte <= b'Z')
 }
 
-// pub fn migrate<S: Storage, A: Api, Q: Querier>(
-//     _deps: &mut Extern<S, A, Q>,
-//     _env: Env,
-//     _msg: MigrateMsg,
-// ) -> StdResult<MigrateResponse> {
-//     Ok(MigrateResponse::default())
-// }
-
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::msg::ResponseStatus;
-    use crate::msg::{InitConfig, InitialBalance};
+    use std::any::Any;
+
     use cosmwasm_std::testing::*;
     use cosmwasm_std::{from_binary, BlockInfo, ContractInfo, MessageInfo, QueryResponse, WasmMsg};
-    use std::any::Any;
+
+    use crate::msg::ResponseStatus;
+    use crate::msg::{InitConfig, InitialBalance};
+
+    use super::*;
 
     // Helper functions
 
@@ -1133,11 +1129,11 @@ mod tests {
                 HumanAddr("bob".to_string()),
                 HumanAddr("bob".to_string()),
                 Uint128(100),
-                Some(to_binary("hey hey you you").unwrap())
+                Some(to_binary("hey hey you you").unwrap()),
             )
             .into_binary()
             .unwrap(),
-            send: vec![]
+            send: vec![],
         })));
     }
 
@@ -1523,7 +1519,7 @@ mod tests {
             allowance,
             crate::state::Allowance {
                 amount: 0,
-                expiration: None
+                expiration: None,
             }
         );
 
@@ -1558,7 +1554,7 @@ mod tests {
             allowance,
             crate::state::Allowance {
                 amount: 1950,
-                expiration: None
+                expiration: None,
             }
         );
     }
@@ -1602,7 +1598,7 @@ mod tests {
             allowance,
             crate::state::Allowance {
                 amount: 2000,
-                expiration: None
+                expiration: None,
             }
         );
 
@@ -1624,7 +1620,7 @@ mod tests {
             allowance,
             crate::state::Allowance {
                 amount: 4000,
-                expiration: None
+                expiration: None,
             }
         );
     }

@@ -1,6 +1,6 @@
 use cosmwasm_std::{StdResult, Storage};
-
 use cosmwasm_storage::{ReadonlySingleton, Singleton};
+
 use secretswap::PairInfoRaw;
 
 static KEY_PAIR_INFO: &[u8] = b"pair_info";

@@ -7,9 +7,9 @@ description = "A Terraswap pair contract"
 license = "MIT"
 
 exclude = [
-  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
-  "contract.wasm",
-  "hash.txt",
+    # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+    "contract.wasm",
+    "hash.txt",
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -36,7 +36,7 @@ backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
 integer-sqrt = "0.1.5"
-secretswap = { path = "../../packages/secretswap", default-features = false, version = "0.1.0"}
+secretswap = { path = "../../packages/secretswap", default-features = false, version = "0.1.0" }
 secret-toolkit = { git = "https://github.com/baedrik/secret-toolkit", branch = "add-snip20-calls" }
 
 cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.0" }

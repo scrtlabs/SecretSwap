@@ -23,6 +23,7 @@ use cosmwasm_vm::testing::{
     MOCK_CONTRACT_ADDR,
 };
 use cosmwasm_vm::Instance;
+
 use secretswap::{AssetInfo, PairInfo, PairInitMsg};
 use secretswap_pair::msg::{HandleMsg, QueryMsg};
 

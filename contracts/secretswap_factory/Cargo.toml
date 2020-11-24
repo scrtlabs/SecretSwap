@@ -7,9 +7,9 @@ description = "A secretswap factory contract - auto pair contract generator and 
 license = "MIT"
 
 exclude = [
-  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
-  "contract.wasm",
-  "hash.txt",
+    # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+    "contract.wasm",
+    "hash.txt",
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -35,9 +35,10 @@ default = []
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-secretswap = { path = "../../packages/secretswap", default-features = false, version = "0.1.0"}
-cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.0" }
-cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.0" }
+secretswap = { path = "../../packages/secretswap", default-features = false, version = "0.1.0" }
+secret-toolkit = { git = "https://github.com/baedrik/secret-toolkit", branch = "add-snip20-calls" }
+cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.0", features = ["iterator"] }
+cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.0", features = ["iterator"] }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 

@@ -1,11 +1,11 @@
+use cosmwasm_std::{Binary, HumanAddr, StdError, StdResult, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Binary, HumanAddr, StdError, StdResult, Uint128};
+use secretswap::InitHook;
 
 use crate::state::Tx;
 use crate::viewing_key::ViewingKey;
-use secretswap::InitHook;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 pub struct InitialBalance {
@@ -51,7 +51,6 @@ impl InitConfig {
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleMsg {
-
     // Base ERC-20 stuff
     Transfer {
         recipient: HumanAddr,
@@ -138,13 +137,11 @@ pub enum HandleMsg {
         amount: Uint128,
         padding: Option<String>,
     },
-
 }
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum HandleAnswer {
-
     // Base
     Transfer {
         status: ResponseStatus,
@@ -335,8 +332,9 @@ pub fn space_pad(block_size: usize, message: &mut Vec<u8>) -> &mut Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use cosmwasm_std::{from_slice, StdResult};
+
+    use super::*;
 
     #[derive(Serialize, Deserialize, JsonSchema, Debug, PartialEq)]
     #[serde(rename_all = "snake_case")]

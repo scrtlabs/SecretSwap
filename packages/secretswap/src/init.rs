@@ -1,16 +1,17 @@
+use cosmwasm_std::{Binary, HumanAddr, StdError, StdResult, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::asset::AssetInfo;
 use crate::hook::InitHook;
-use cosmwasm_std::{StdError, StdResult, Uint128, HumanAddr};
+
 //use secret_toolkit::snip20::{MinterResponse};
 
 /// TokenContract InitMsg
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct Balance {
     pub amount: Uint128,
-    pub address: HumanAddr
+    pub address: HumanAddr,
 }
 
 // #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
@@ -38,16 +39,18 @@ pub struct PairInitMsg {
     pub token_code_hash: String,
     /// Hook for post initalization
     pub init_hook: Option<InitHook>,
+    pub prng_seed: Binary,
 }
 
 /// TokenContract InitMsg
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct TokenInitMsg {
     pub name: String,
+    pub admin: Option<HumanAddr>,
     pub symbol: String,
     pub decimals: u8,
-    pub initial_balances: Vec<Balance>,
-    pub admin: Option<HumanAddr>,
+    pub initial_balances: Option<Vec<Balance>>,
+    pub prng_seed: Binary,
     pub init_hook: Option<InitHook>,
 }
 

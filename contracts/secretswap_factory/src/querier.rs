@@ -3,6 +3,7 @@ use cosmwasm_std::{
     WasmQuery,
 };
 use cosmwasm_storage::to_length_prefixed;
+
 use secretswap::PairInfoRaw;
 
 pub fn query_liquidity_token<S: Storage, A: Api, Q: Querier>(

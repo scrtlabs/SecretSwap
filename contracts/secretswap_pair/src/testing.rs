@@ -1,3 +1,12 @@
+use cosmwasm_std::testing::{mock_env, MOCK_CONTRACT_ADDR};
+use cosmwasm_std::{
+    log, to_binary, BankMsg, BlockInfo, Coin, CosmosMsg, Decimal, Env, HandleResponse, HumanAddr,
+    StdError, Uint128, WasmMsg,
+};
+
+use cw20::{Cw20HandleMsg, Cw20ReceiveMsg, MinterResponse};
+use secretswap::{Asset, AssetInfo, InitHook, PairInfo, PairInitMsg, TokenInitMsg};
+
 use crate::contract::{
     assert_max_spread, handle, init, query_pair_info, query_pool, query_reverse_simulation,
     query_simulation,
@@ -5,16 +14,8 @@ use crate::contract::{
 use crate::math::{decimal_multiplication, reverse_decimal};
 use crate::mock_querier::mock_dependencies;
 use crate::msg::{
-    Cw20HookMsg, HandleMsg, PoolResponse, ReverseSimulationResponse,
-    SimulationResponse,
+    Cw20HookMsg, HandleMsg, PoolResponse, ReverseSimulationResponse, SimulationResponse,
 };
-use cosmwasm_std::testing::{mock_env, MOCK_CONTRACT_ADDR};
-use cosmwasm_std::{
-    log, to_binary, BankMsg, BlockInfo, Coin, CosmosMsg, Decimal, Env, HandleResponse, HumanAddr,
-    StdError, Uint128, WasmMsg,
-};
-use cw20::{Cw20HandleMsg, Cw20ReceiveMsg, MinterResponse};
-use secretswap::{Asset, AssetInfo, InitHook, PairInitMsg, TokenInitMsg, PairInfo};
 
 #[test]
 fn proper_initialization() {
@@ -596,7 +597,8 @@ fn try_native_to_token() {
         20,
         &[Coin {
             denom: "uusd".to_string(),
-            amount: collateral_pool_amount + offer_amount, /* user deposit must be pre-applied */
+            amount: collateral_pool_amount + offer_amount,
+            /* user deposit must be pre-applied */
         }],
     );
 
@@ -675,7 +677,8 @@ fn try_native_to_token() {
         &HumanAddr::from(MOCK_CONTRACT_ADDR),
         &[Coin {
             denom: "uusd".to_string(),
-            amount: collateral_pool_amount, /* user deposit must be pre-applied */
+            amount: collateral_pool_amount,
+            /* user deposit must be pre-applied */
         }],
     )]);
 
@@ -1085,13 +1088,13 @@ fn test_query_pool() {
                 info: AssetInfo::NativeToken {
                     denom: "uusd".to_string(),
                 },
-                amount: asset_0_amount
+                amount: asset_0_amount,
             },
             Asset {
                 info: AssetInfo::Token {
                     contract_addr: HumanAddr::from("asset0000"),
                 },
-                amount: asset_1_amount
+                amount: asset_1_amount,
             }
         ]
     );

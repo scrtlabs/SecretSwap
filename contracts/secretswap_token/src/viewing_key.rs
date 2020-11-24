@@ -1,9 +1,8 @@
 use std::fmt;
 
+use cosmwasm_std::Env;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use cosmwasm_std::Env;
 
 use crate::rand::{sha_256, Prng};
 use crate::utils::{create_hashed_password, ct_slice_compare};
