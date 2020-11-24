@@ -1,0 +1,28 @@
+[package]
+name = "secretswap"
+version = "0.1.0"
+authors = ["Terraform Labs, PTE.", "Enigma MPC"]
+edition = "2018"
+description = "Common helpers for other secretswap specs"
+license = "Apache-2.0"
+repository = "https://github.com/enigmampc/secretswap"
+homepage = "https://terra.money"
+documentation = "https://docs.terra.money"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = []
+# for quicker tests, cargo test --lib
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+
+[dependencies]
+cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.0" }
+cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.0" }
+schemars = "0.7"
+serde = { version = "1.0.103", default-features = false, features = ["derive"] }
+secret-toolkit = { git = "https://github.com/baedrik/secret-toolkit", branch = "add-snip20-calls" }
+
+[dev-dependencies]
+cosmwasm-vm = { version = "0.10.1", default-features = false }
