@@ -76,10 +76,14 @@ impl Asset {
         let amount = self.amount;
 
         match &self.info {
-            AssetInfo::Token { contract_addr } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+            AssetInfo::Token {
+                contract_addr,
+                token_code_hash,
+                ..
+            } => Ok(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: contract_addr.clone(),
 
-                callback_code_hash: "".to_string(),
+                callback_code_hash: token_code_hash.clone(),
 
                 msg: to_binary(&HandleMsg::Transfer {
                     recipient,
@@ -128,8 +132,14 @@ impl Asset {
                 AssetInfo::NativeToken { denom } => AssetInfoRaw::NativeToken {
                     denom: denom.to_string(),
                 },
-                AssetInfo::Token { contract_addr } => AssetInfoRaw::Token {
+                AssetInfo::Token {
+                    contract_addr,
+                    token_code_hash,
+                    viewing_key,
+                } => AssetInfoRaw::Token {
                     contract_addr: deps.api.canonical_address(&contract_addr)?,
+                    token_code_hash: token_code_hash.clone(),
+                    viewing_key: viewing_key.clone(),
                 },
             },
             amount: self.amount,
@@ -140,15 +150,21 @@ impl Asset {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AssetInfo {
-    Token { contract_addr: HumanAddr },
-    NativeToken { denom: String },
+    Token {
+        contract_addr: HumanAddr,
+        token_code_hash: String,
+        viewing_key: String,
+    },
+    NativeToken {
+        denom: String,
+    },
 }
 
 impl fmt::Display for AssetInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             AssetInfo::NativeToken { denom } => write!(f, "{}", denom),
-            AssetInfo::Token { contract_addr } => write!(f, "{}", contract_addr),
+            AssetInfo::Token { contract_addr, .. } => write!(f, "{}", contract_addr),
         }
     }
 }
@@ -162,8 +178,14 @@ impl AssetInfo {
             AssetInfo::NativeToken { denom } => Ok(AssetInfoRaw::NativeToken {
                 denom: denom.to_string(),
             }),
-            AssetInfo::Token { contract_addr } => Ok(AssetInfoRaw::Token {
+            AssetInfo::Token {
+                contract_addr,
+                viewing_key,
+                token_code_hash,
+            } => Ok(AssetInfoRaw::Token {
                 contract_addr: deps.api.canonical_address(&contract_addr)?,
+                viewing_key: viewing_key.clone(),
+                token_code_hash: token_code_hash.clone(),
             }),
         }
     }
@@ -180,9 +202,17 @@ impl AssetInfo {
         pool_addr: &HumanAddr,
     ) -> StdResult<Uint128> {
         match self {
-            AssetInfo::Token { contract_addr, .. } => {
-                query_token_balance(deps, &contract_addr, &pool_addr)
-            }
+            AssetInfo::Token {
+                contract_addr,
+                viewing_key,
+                token_code_hash,
+            } => query_token_balance(
+                deps,
+                &contract_addr,
+                token_code_hash,
+                &pool_addr,
+                &viewing_key,
+            ),
             AssetInfo::NativeToken { denom, .. } => {
                 query_balance(deps, pool_addr, denom.to_string())
             }
@@ -225,8 +255,14 @@ impl AssetRaw {
                 AssetInfoRaw::NativeToken { denom } => AssetInfo::NativeToken {
                     denom: denom.to_string(),
                 },
-                AssetInfoRaw::Token { contract_addr } => AssetInfo::Token {
+                AssetInfoRaw::Token {
+                    contract_addr,
+                    viewing_key,
+                    token_code_hash,
+                } => AssetInfo::Token {
                     contract_addr: deps.api.human_address(&contract_addr)?,
+                    viewing_key: viewing_key.clone(),
+                    token_code_hash: token_code_hash.clone(),
                 },
             },
             amount: self.amount,
@@ -236,8 +272,14 @@ impl AssetRaw {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub enum AssetInfoRaw {
-    Token { contract_addr: CanonicalAddr },
-    NativeToken { denom: String },
+    Token {
+        contract_addr: CanonicalAddr,
+        token_code_hash: String,
+        viewing_key: String,
+    },
+    NativeToken {
+        denom: String,
+    },
 }
 
 impl AssetInfoRaw {
@@ -249,8 +291,14 @@ impl AssetInfoRaw {
             AssetInfoRaw::NativeToken { denom } => Ok(AssetInfo::NativeToken {
                 denom: denom.to_string(),
             }),
-            AssetInfoRaw::Token { contract_addr } => Ok(AssetInfo::Token {
+            AssetInfoRaw::Token {
+                contract_addr,
+                viewing_key,
+                token_code_hash,
+            } => Ok(AssetInfo::Token {
                 contract_addr: deps.api.human_address(&contract_addr)?,
+                viewing_key: viewing_key.clone(),
+                token_code_hash: token_code_hash.clone(),
             }),
         }
     }
@@ -258,7 +306,7 @@ impl AssetInfoRaw {
     pub fn as_bytes(&self) -> &[u8] {
         match self {
             AssetInfoRaw::NativeToken { denom } => denom.as_bytes(),
-            AssetInfoRaw::Token { contract_addr } => contract_addr.as_slice(),
+            AssetInfoRaw::Token { contract_addr, .. } => contract_addr.as_slice(),
         }
     }
 
@@ -290,6 +338,7 @@ pub struct PairInfo {
     pub asset_infos: [AssetInfo; 2],
     pub contract_addr: HumanAddr,
     pub liquidity_token: HumanAddr,
+    pub token_code_hash: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -297,6 +346,7 @@ pub struct PairInfoRaw {
     pub asset_infos: [AssetInfoRaw; 2],
     pub contract_addr: CanonicalAddr,
     pub liquidity_token: CanonicalAddr,
+    pub token_code_hash: String,
 }
 
 impl PairInfoRaw {
@@ -311,6 +361,7 @@ impl PairInfoRaw {
                 self.asset_infos[0].to_normal(&deps)?,
                 self.asset_infos[1].to_normal(&deps)?,
             ],
+            token_code_hash: self.token_code_hash.clone(),
         })
     }
 
