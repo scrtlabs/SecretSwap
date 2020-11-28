@@ -170,8 +170,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
         // Mint
         HandleMsg::Mint {
-            amount, address, ..
-        } => try_mint(deps, env, address, amount),
+            amount, recipient, ..
+        } => try_mint(deps, env, recipient, amount),
 
         // Other
         HandleMsg::ChangeAdmin { address, .. } => change_admin(deps, env, address),

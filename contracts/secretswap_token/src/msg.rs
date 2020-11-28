@@ -39,7 +39,7 @@ impl InitMsg {
 pub struct InitConfig {
     /// Indicates whether the total supply is public or should be kept secret.
     /// default: False
-    public_total_supply: Option<bool>,
+    pub public_total_supply: Option<bool>,
 }
 
 impl InitConfig {
@@ -116,7 +116,7 @@ pub enum HandleMsg {
     // Mint
     Mint {
         amount: Uint128,
-        address: HumanAddr,
+        recipient: HumanAddr,
         padding: Option<String>,
     },
     AddMinters {

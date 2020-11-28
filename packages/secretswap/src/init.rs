@@ -52,13 +52,42 @@ pub struct TokenInitMsg {
     pub initial_balances: Option<Vec<Balance>>,
     pub prng_seed: Binary,
     pub init_hook: Option<InitHook>,
+    pub config: Option<InitConfig>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema, Clone, Default, Debug)]
+#[serde(rename_all = "snake_case")]
+pub struct InitConfig {
+    /// Indicates whether the total supply is public or should be kept secret.
+    /// default: False
+    pub public_total_supply: Option<bool>,
 }
 
 impl TokenInitMsg {
     // pub fn get_cap(&self) -> Option<Uint128> {
     //     self.mint.as_ref().and_then(|v| v.cap)
     // }
-
+    pub fn new(
+        name: String,
+        admin: HumanAddr,
+        symbol: String,
+        decimals: u8,
+        prng_seed: Binary,
+        init_hook: InitHook,
+    ) -> Self {
+        Self {
+            name,
+            admin: Some(admin),
+            symbol,
+            decimals,
+            initial_balances: None,
+            prng_seed,
+            init_hook: Some(init_hook),
+            config: Some(InitConfig {
+                public_total_supply: Some(true),
+            }),
+        }
+    }
     pub fn validate(&self) -> StdResult<()> {
         // Check name, symbol, decimals
         if !is_valid_name(&self.name) {

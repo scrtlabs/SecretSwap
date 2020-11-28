@@ -1,6 +1,5 @@
 use cosmwasm_std::{
-    from_binary, to_binary, Api, Binary, Extern, HumanAddr, Querier, QueryRequest, StdResult,
-    Storage, WasmQuery,
+    to_binary, Api, Extern, HumanAddr, Querier, QueryRequest, StdResult, Storage, WasmQuery,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -20,12 +19,11 @@ pub fn query_liquidity_token<S: Storage, A: Api, Q: Querier>(
     code_hash: &String,
 ) -> StdResult<HumanAddr> {
     // load price form the oracle
-    let res: Binary = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+    let pair_info: PairInfo = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
         callback_code_hash: code_hash.clone(),
         contract_addr: contract_addr.clone(),
         msg: to_binary(&QueryMsgPair::Pair {})?,
     }))?;
 
-    let pair_info: PairInfo = from_binary(&res)?;
     Ok(pair_info.liquidity_token)
 }

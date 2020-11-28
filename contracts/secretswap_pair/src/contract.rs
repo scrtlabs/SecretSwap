@@ -7,8 +7,7 @@ use cosmwasm_std::{
 };
 use integer_sqrt::IntegerSquareRoot;
 //use ::{Cw20HandleMsg, Cw20ReceiveMsg, MinterResponse};
-use secret_toolkit::snip20::set_viewing_key_msg;
-use secret_toolkit::snip20::HandleMsg as S20HandleMsg;
+use secret_toolkit::snip20;
 
 use secretswap::{
     query_supply, Asset, AssetInfo, AssetInfoRaw, InitHook, PairInfo, PairInfoRaw, PairInitMsg,
@@ -47,7 +46,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             token_code_hash,
             ..
         } => {
-            messages.push(set_viewing_key_msg(
+            messages.push(snip20::set_viewing_key_msg(
                 vk_str.clone(),
                 None,
                 256,
@@ -68,7 +67,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             token_code_hash,
             ..
         } => {
-            messages.push(set_viewing_key_msg(
+            messages.push(snip20::set_viewing_key_msg(
                 vk_str.clone(),
                 None,
                 256,
@@ -98,21 +97,18 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     // Create LP token
     messages.extend(vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
         code_id: msg.token_code_id,
-        msg: to_binary(&TokenInitMsg {
-            name: "secretswap liquidity token".to_string(),
-            symbol: "uLP".to_string(),
-            decimals: 6,
-            initial_balances: None,
-            prng_seed: msg.prng_seed,
-            admin: Some(env.contract.address.clone()),
-
-            // todo: figure out if we want to do this differently
-            init_hook: Some(InitHook {
+        msg: to_binary(&TokenInitMsg::new(
+            "secretswap liquidity token".to_string(),
+            env.contract.address.clone(),
+            "uLP".to_string(),
+            6,
+            msg.prng_seed,
+            InitHook {
                 msg: to_binary(&HandleMsg::PostInitialize {})?,
                 contract_addr: env.contract.address,
                 code_hash: env.contract_code_hash,
-            }),
-        })?,
+            },
+        ))?,
         send: vec![],
         label: format!("{}-{}-token", &msg.asset_infos[0], &msg.asset_infos[1]),
         callback_code_hash: msg.token_code_hash,
@@ -247,12 +243,18 @@ pub fn try_post_initialize<S: Storage, A: Api, Q: Querier>(
         &mut deps.storage,
         &PairInfoRaw {
             liquidity_token: deps.api.canonical_address(&env.message.sender)?,
-            ..config
+            ..config.clone()
         },
     )?;
 
     Ok(HandleResponse {
-        messages: vec![],
+        messages: vec![snip20::register_receive_msg(
+            env.contract_code_hash,
+            None,
+            256,
+            config.token_code_hash,
+            env.message.sender.clone(),
+        )?],
         log: vec![log("liquidity_token_addr", env.message.sender.as_str())],
         data: None,
     })
@@ -288,18 +290,21 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
     let mut messages: Vec<CosmosMsg> = vec![];
     for pool in pools.iter_mut() {
         // If the pool is token contract, then we need to execute TransferFrom msg to receive funds
-        if let AssetInfo::Token { contract_addr, .. } = &pool.info {
-            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: contract_addr.clone(),
-                callback_code_hash: "".to_string(),
-                msg: to_binary(&S20HandleMsg::TransferFrom {
-                    owner: env.message.sender.clone(),
-                    recipient: env.contract.address.clone(),
-                    amount: deposits[i],
-                    padding: None,
-                })?,
-                send: vec![],
-            }));
+        if let AssetInfo::Token {
+            contract_addr,
+            token_code_hash,
+            ..
+        } = &pool.info
+        {
+            messages.push(snip20::transfer_from_msg(
+                env.message.sender.clone(),
+                env.contract.address.clone(),
+                deposits[i],
+                None,
+                256,
+                token_code_hash.clone(),
+                contract_addr.clone(),
+            )?);
         } else {
             // If the asset is native token, balance is already increased
             // To calculated properly we should subtract user deposit from the pool
@@ -329,17 +334,15 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
         )
     };
 
-    // mint LP token to sender
-    messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: deps.api.human_address(&pair_info.liquidity_token)?,
-        msg: to_binary(&S20HandleMsg::Mint {
-            recipient: env.message.sender,
-            amount: share,
-            padding: None,
-        })?,
-        send: vec![],
-        callback_code_hash: "".to_string(),
-    }));
+    messages.push(snip20::mint_msg(
+        env.message.sender,
+        share,
+        None,
+        256,
+        pair_info.token_code_hash,
+        deps.api.human_address(&pair_info.liquidity_token)?,
+    )?);
+
     Ok(HandleResponse {
         messages,
         log: vec![
@@ -385,15 +388,13 @@ pub fn try_withdraw_liquidity<S: Storage, A: Api, Q: Querier>(
                 .clone()
                 .into_msg(&deps, env.contract.address, sender)?,
             // burn liquidity token
-            CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: deps.api.human_address(&pair_info.liquidity_token)?,
-                msg: to_binary(&S20HandleMsg::Burn {
-                    amount,
-                    padding: None,
-                })?,
-                send: vec![],
-                callback_code_hash: "".to_string(),
-            }),
+            snip20::burn_msg(
+                amount,
+                None,
+                256,
+                pair_info.token_code_hash,
+                deps.api.human_address(&pair_info.liquidity_token)?,
+            )?,
         ],
         log: vec![
             log("action", "withdraw_liquidity"),
@@ -547,7 +548,7 @@ pub fn query_simulation<S: Storage, A: Api, Q: Querier>(
         ask_pool = pools[0].clone();
     } else {
         return Err(StdError::generic_err(
-            "Given offer asset is not blong to pairs",
+            "Given offer asset is not belong to pairs",
         ));
     }
 
