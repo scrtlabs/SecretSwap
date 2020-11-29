@@ -7,8 +7,7 @@ use cosmwasm_std::{
 };
 use cosmwasm_storage::to_length_prefixed;
 
-use cw20::TokenInfoResponse;
-use terra_cosmwasm::{TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute};
+//use terra_cosmwasm::{TaxCapResponse, TaxRateResponse, TerraQuery, TerraQueryWrapper, TerraRoute};
 
 /// mock_dependencies is a drop-in replacement for cosmwasm_std::testing::mock_dependencies
 /// this uses our CustomQuerier.
@@ -97,7 +96,7 @@ impl Querier for WasmMockQuerier {
             Ok(v) => v,
             Err(e) => {
                 return Err(SystemError::InvalidRequest {
-                    error: format!("Parsing query request: {}", e),
+                    error: format!("Parsing query request: {:?}", e),
                     request: bin_request.into(),
                 });
             }
@@ -134,7 +133,11 @@ impl WasmMockQuerier {
                     panic!("DO NOT ENTER HERE")
                 }
             }
-            QueryRequest::Wasm(WasmQuery::Raw { contract_addr, key }) => {
+            QueryRequest::Wasm(WasmQuery::Raw {
+                contract_addr,
+                key,
+                callback_code_hash,
+            }) => {
                 let key: &[u8] = key.as_slice();
 
                 let balances: &HashMap<HumanAddr, Uint128> =
@@ -162,11 +165,13 @@ impl WasmMockQuerier {
                     }
 
                     Ok(to_binary(
-                        &to_binary(&TokenInfoResponse {
-                            name: "mAPPL".to_string(),
-                            symbol: "mAPPL".to_string(),
-                            decimals: 6,
-                            total_supply: total_supply,
+                        &to_binary(&secret_toolkit::snip20::TokenInfoResponse {
+                            token_info: secret_toolkit::snip20::TokenInfo {
+                                name: "mAPPL".to_string(),
+                                symbol: "mAPPL".to_string(),
+                                decimals: 6,
+                                total_supply: Some(total_supply),
+                            },
                         })
                         .unwrap(),
                     ))
@@ -179,7 +184,7 @@ impl WasmMockQuerier {
                         Ok(v) => v,
                         Err(e) => {
                             return Err(SystemError::InvalidRequest {
-                                error: format!("Parsing query request: {}", e),
+                                error: format!("Parsing query request: {:?}", e),
                                 request: key.into(),
                             });
                         }

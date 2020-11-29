@@ -9,8 +9,8 @@ pub struct InitHook {
     pub code_hash: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum TokenCw20HookMsg {
-    Migrate {},
-}
+// #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+// #[serde(rename_all = "snake_case")]
+// pub enum TokenCw20HookMsg {
+//     Migrate {},
+// }

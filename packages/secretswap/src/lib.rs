@@ -1,5 +1,5 @@
 pub use crate::asset::{Asset, AssetInfo, AssetInfoRaw, AssetRaw, PairInfo, PairInfoRaw};
-pub use crate::hook::{InitHook, TokenCw20HookMsg};
+pub use crate::hook::InitHook;
 pub use crate::init::{Balance, PairInitMsg, TokenInitMsg};
 pub use crate::msg::{
     FactoryHandleMsg, FactoryQueryMsg, PairCw20HookMsg, PairHandleMsg, PairQueryMsg,

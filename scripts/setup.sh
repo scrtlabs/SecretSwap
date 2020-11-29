@@ -70,7 +70,28 @@ secretcli tx compute execute $(echo "$pair_contract" | tr -d '"') '{"provide_liq
 
 secretcli tx compute execute $(echo "$lptoken" | tr -d '"') '{"set_viewing_key": {"key": "yo"}}' -b block -y --from $deployer_name
 
-lpbalance=$(secretcli q compute query $(echo "$lptoken" | tr -d '"') '{"balance": {"address": '$deployer_address', "key": "yo"}}' -b block -y --from $deployer_name | jq '.balance.amount')
+lpbalance=$(secretcli q compute query $(echo "$lptoken" | tr -d '"') "{"balance": {"address": "$deployer_address", "key": "yo"}}" | jq '.balance.amount')
 echo "LP Token balance: '$lpbalance'"
 
 echo $(secretcli q compute query $(echo "$pair_contract" | tr -d '"') '{"simulation": {"offer_asset": {"info": {"native_token": {"denom": "uscrt"}}, "amount": "1000"}}}')
+
+
+secretcli tx compute execute $(echo "$token_addr" | tr -d '"') '{"set_viewing_key": {"key": "yo"}}' -b block -y --from $deployer_name
+
+tbalance=$(secretcli q compute query $(echo "$token_addr" | tr -d '"') '{"balance": {"address": "'$deployer_address'", "key": "yo"}}' | jq '.balance.amount')
+echo "Token balance before swap: '$tbalance'"
+
+balance=$(secretcli q account $deployer_address | jq '.value.coins[0].amount')
+
+echo "USCRT balance before swap: '$balance'"
+
+export STORE_TX_HASH=$(
+  secretcli tx compute execute $(echo "$pair_contract" | tr -d '"') '{"swap": {"offer_asset": {"info": {"native_token": {"denom": "uscrt"}}, "amount": "1000"}}}' --amount 1000uscrt -b block -y --from $deployer_name --gas 1500000 |
+  jq -r .txhash
+)
+wait_for_tx "$STORE_TX_HASH" "Waiting for instantiate to finish on-chain..."
+
+tbalance=$(secretcli q compute query $(echo "$token_addr" | tr -d '"') '{"balance": {"address": "'$deployer_address'", "key": "yo"}}' | jq '.balance.amount')
+echo "Token balance after swap: '$tbalance'"
+balance=$(secretcli q account $deployer_address | jq '.value.coins[0].amount')
+echo "USCRT balance after swap: '$balance'"

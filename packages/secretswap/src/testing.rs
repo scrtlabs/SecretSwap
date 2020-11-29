@@ -1,7 +1,7 @@
 use cosmwasm_std::testing::MOCK_CONTRACT_ADDR;
 use cosmwasm_std::{to_binary, BankMsg, Coin, CosmosMsg, Decimal, HumanAddr, Uint128, WasmMsg};
 
-use cw20::Cw20HandleMsg;
+use secret_toolkit::snip20;
 
 use crate::asset::{Asset, AssetInfo, PairInfo};
 use crate::mock_querier::mock_dependencies;
@@ -23,7 +23,9 @@ fn token_balance_querier() {
         query_token_balance(
             &deps,
             &HumanAddr::from("liquidity0000"),
+            &"".to_string(),
             &HumanAddr::from(MOCK_CONTRACT_ADDR),
+            &"".to_string()
         )
         .unwrap()
     );
@@ -96,7 +98,7 @@ fn supply_querier() {
     )]);
 
     assert_eq!(
-        query_supply(&deps, &HumanAddr::from("liquidity0000")).unwrap(),
+        query_supply(&deps, &HumanAddr::from("liquidity0000"), &"".to_string()).unwrap(),
         Uint128(492u128)
     )
 }
@@ -105,6 +107,8 @@ fn supply_querier() {
 fn test_asset_info() {
     let token_info: AssetInfo = AssetInfo::Token {
         contract_addr: HumanAddr::from("asset0000"),
+        viewing_key: "".to_string(),
+        token_code_hash: "".to_string(),
     };
     let native_token_info: AssetInfo = AssetInfo::NativeToken {
         denom: "uusd".to_string(),
@@ -116,6 +120,8 @@ fn test_asset_info() {
         false,
         token_info.equal(&AssetInfo::Token {
             contract_addr: HumanAddr::from("asset0001"),
+            viewing_key: "".to_string(),
+            token_code_hash: "".to_string(),
         })
     );
 
@@ -123,6 +129,8 @@ fn test_asset_info() {
         true,
         token_info.equal(&AssetInfo::Token {
             contract_addr: HumanAddr::from("asset0000"),
+            viewing_key: "".to_string(),
+            token_code_hash: "".to_string(),
         })
     );
 
@@ -189,6 +197,8 @@ fn test_asset() {
         amount: Uint128(123123u128),
         info: AssetInfo::Token {
             contract_addr: HumanAddr::from("asset0000"),
+            viewing_key: "".to_string(),
+            token_code_hash: "".to_string(),
         },
     };
 
@@ -221,15 +231,15 @@ fn test_asset() {
                 HumanAddr::from("addr0000"),
             )
             .unwrap(),
-        CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: HumanAddr::from("asset0000"),
-            msg: to_binary(&Cw20HandleMsg::Transfer {
-                recipient: HumanAddr::from("addr0000"),
-                amount: Uint128(123123u128),
-            })
-            .unwrap(),
-            send: vec![],
-        })
+        snip20::transfer_msg(
+            HumanAddr::from("addr0000"),
+            Uint128(123123u128),
+            None,
+            256,
+            "".to_string(),
+            HumanAddr::from("asset0000")
+        )
+        .unwrap()
     );
 
     assert_eq!(
@@ -261,6 +271,8 @@ fn query_terraswap_pair_contract() {
             asset_infos: [
                 AssetInfo::Token {
                     contract_addr: HumanAddr::from("asset0000"),
+                    viewing_key: "".to_string(),
+                    token_code_hash: "".to_string(),
                 },
                 AssetInfo::NativeToken {
                     denom: "uusd".to_string(),
@@ -268,15 +280,19 @@ fn query_terraswap_pair_contract() {
             ],
             contract_addr: HumanAddr::from("pair0000"),
             liquidity_token: HumanAddr::from("liquidity0000"),
+            token_code_hash: "".to_string(),
         },
     )]);
 
     let pair_info: PairInfo = query_pair_info(
         &deps,
         &HumanAddr::from(MOCK_CONTRACT_ADDR),
+        &"".to_string(),
         &[
             AssetInfo::Token {
                 contract_addr: HumanAddr::from("asset0000"),
+                viewing_key: "".to_string(),
+                token_code_hash: "".to_string(),
             },
             AssetInfo::NativeToken {
                 denom: "uusd".to_string(),
