@@ -1,30 +1,25 @@
-function wait_for_tx() {
-    until (secretcli q tx "$1"); do
-        sleep 5
-    done
+#!/bin/bash
+
+docker_name=secretdev
+
+function secretcli() {
+  docker exec "$docker_name" secretcli "$@";
 }
 
-
-secretcli config output json
-secretcli config chain-id enigma-pub-testnet-3
-secretcli config keyring-backend test
-secretcli config indent true
-secretcli config trust-node true
-secretcli config node tcp://localhost:26657
+function wait_for_tx() {
+  until (secretcli q tx "$1"); do
+      sleep 5
+  done
+}
 
 export SGX_MODE=SW
 
-docker_name=secretdev
-deployer_name=t1
+deployer_name=a
 
 deployer_address=$(secretcli keys show -a $deployer_name)
 echo "Deployer address: '$deployer_address'"
-genesis_address=$(docker exec $docker_name secretcli keys show -a a)
-echo "Genesis address: '$genesis_address'"
 
-docker exec $docker_name secretcli tx send $genesis_address $deployer_address 10000000000uscrt --from a -b block -y
-
-docker exec -it $docker_name secretcli tx compute store "/root/code/build/secretswap_token.wasm" --from a --gas 2000000 -b block -y
+docker exec -it "$docker_name" secretcli tx compute store "/root/code/build/secretswap_token.wasm" --from a --gas 2000000 -b block -y
 token_code_id=$(secretcli query compute list-code | jq '.[-1]."id"')
 token_code_hash=$(secretcli query compute list-code | jq '.[-1]."data_hash"')
 echo "Stored token: '$token_code_id', '$token_code_hash'"
