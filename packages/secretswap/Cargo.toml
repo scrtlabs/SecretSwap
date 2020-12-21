@@ -10,7 +10,6 @@ homepage = "https://terra.money"
 documentation = "https://docs.terra.money"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [features]
 default = []
 # for quicker tests, cargo test --lib
@@ -22,7 +21,7 @@ cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", tag = "
 cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.0" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-secret-toolkit = { git = "https://github.com/baedrik/secret-toolkit", branch = "add-snip20-calls" }
+secret-toolkit = { git = "https://github.com/enigmampc/secret-toolkit" }
 # secretswap-token = { path= "../../contracts/secretswap_token"}
 #[dev-dependencies]
 #cosmwasm-vm = { version = "0.10.1", default-features = false }
