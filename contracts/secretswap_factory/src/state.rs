@@ -32,12 +32,20 @@ pub fn read_config<S: Storage>(storage: &S) -> StdResult<Config> {
 pub fn store_pair<S: Storage>(storage: &mut S, data: &PairInfoRaw) -> StdResult<()> {
     let mut asset_infos = data.asset_infos.clone().to_vec();
     asset_infos.sort_by(|a, b| a.as_bytes().cmp(&b.as_bytes()));
-    let mut tracker = read_pair_tracker(storage).unwrap_or_default();
     let key = &[asset_infos[0].as_bytes(), asset_infos[1].as_bytes()].concat();
     let mut pair_bucket: Bucket<S, PairInfoRaw> = Bucket::new(PREFIX_PAIR_INFO, storage);
     pair_bucket.save(key, &data)?;
-    tracker.0.push(key.to_vec());
-    store_pair_tracker(storage, &tracker)
+
+    let mut tracker = read_pair_tracker(storage).unwrap_or_default();
+    let key_as_vec = key.to_vec();
+    if !tracker.0.iter().any(|i| *i == key_as_vec) {
+        // new pair
+        tracker.0.push(key_as_vec);
+        store_pair_tracker(storage, &tracker)
+    } else {
+        // pair already stored in pair_tracker
+        Ok(())
+    }
 }
 pub fn read_pair_by_key<S: Storage>(storage: &S, asset_infos: &[u8]) -> StdResult<PairInfoRaw> {
     let pair_bucket: ReadonlyBucket<S, PairInfoRaw> =
