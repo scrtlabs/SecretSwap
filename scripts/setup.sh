@@ -52,6 +52,9 @@ export STORE_TX_HASH=$(
 )
 wait_for_tx "$STORE_TX_HASH" "Waiting for instantiate to finish on-chain..."
 
+factory_contract=$(docker exec -it $docker_name secretcli query compute list-contract-by-code $factory_code_id | jq '.[-1].address')
+echo "Factory address: '$factory_contract'"
+
 secretcli tx compute execute --label $label '{"create_pair": {"asset_infos": [{"native_token": {"denom": "uscrt"}},{"token": {"contract_addr": '$token_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}]}}' --from $deployer_name -y --gas 1500000 -b block
 
 pair_contract=$(docker exec -it $docker_name secretcli query compute list-contract-by-code $pair_code_id | jq '.[-1].address')
@@ -65,7 +68,7 @@ secretcli tx compute execute $(echo "$pair_contract" | tr -d '"') '{"provide_liq
 
 secretcli tx compute execute $(echo "$lptoken" | tr -d '"') '{"set_viewing_key": {"key": "yo"}}' -b block -y --from $deployer_name
 
-lpbalance=$(secretcli q compute query $(echo "$lptoken" | tr -d '"') "{"balance": {"address": "$deployer_address", "key": "yo"}}" | jq '.balance.amount')
+lpbalance=$(secretcli q compute query $(echo "$lptoken" | tr -d '"') '{"balance": {"address": "'$deployer_address'", "key": "yo"}}' | jq '.balance.amount')
 echo "LP Token balance: '$lpbalance'"
 
 echo $(secretcli q compute query $(echo "$pair_contract" | tr -d '"') '{"simulation": {"offer_asset": {"info": {"native_token": {"denom": "uscrt"}}, "amount": "1000"}}}')
@@ -90,3 +93,6 @@ tbalance=$(secretcli q compute query $(echo "$token_addr" | tr -d '"') '{"balanc
 echo "Token balance after swap: '$tbalance'"
 balance=$(secretcli q account $deployer_address | jq '.value.coins[0].amount')
 echo "USCRT balance after swap: '$balance'"
+
+secretcli q compute query $(echo "$factory_contract" | tr -d '"') '{"pairs": {}}'
+secretcli q compute query $(echo "$factory_contract" | tr -d '"') '{"pairs": {"limit": 1}}'
