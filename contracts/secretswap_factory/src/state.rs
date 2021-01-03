@@ -79,10 +79,7 @@ pub fn read_pairs<S: Storage, A: Api, Q: Querier>(
     //return pair_bucket.load()
     let tracker = read_pair_tracker(&deps.storage)?;
     let mut iter = tracker.0.iter();
-    let limit = limit
-        .unwrap_or(DEFAULT_LIMIT)
-        .min(MAX_LIMIT)
-        .max(iter.len() as u32) as usize;
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
     if let Some(start) = calc_range_start(start_after) {
         iter.position(|key| key == &start);
     };
