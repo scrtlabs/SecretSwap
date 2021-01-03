@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -xe
+
 docker_name=secretdev
 
 function secretcli() {
@@ -94,5 +96,26 @@ echo "Token balance after swap: '$tbalance'"
 balance=$(secretcli q account $deployer_address | jq '.value.coins[0].amount')
 echo "USCRT balance after swap: '$balance'"
 
+
+label=$(date +"%T")
+
+export STORE_TX_HASH=$(
+  secretcli tx compute instantiate $token_code_id '{"admin": "'$deployer_address'", "symbol": "TST2", "decimals": 6, "initial_balances": [{"address": "'$deployer_address'", "amount": "1000000000"}], "prng_seed": "YWE", "name": "test"}' --from $deployer_name --gas 1500000 --label "${label}" -b block -y |
+  jq -r .txhash
+)
+wait_for_tx "$STORE_TX_HASH" "Waiting for instantiate to finish on-chain..."
+
+token2_addr=$(docker exec -it $docker_name secretcli query compute list-contract-by-code $token_code_id | jq '.[-1].address')
+echo "Token2 address: '$token2_addr'"
+
+secretcli tx compute execute $(echo "$factory_contract" | tr -d '"') '{"create_pair": {"asset_infos": [{"native_token": {"denom": "uscrt"}},{"token": {"contract_addr": '$token2_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}]}}' --from $deployer_name -y --gas 1500000 -b block
+
 secretcli q compute query $(echo "$factory_contract" | tr -d '"') '{"pairs": {}}'
 secretcli q compute query $(echo "$factory_contract" | tr -d '"') '{"pairs": {"limit": 1}}'
+secretcli q compute query $(echo "$factory_contract" | tr -d '"') '{"pairs": {"limit": 2}}'
+secretcli q compute query $(echo "$factory_contract" | tr -d '"') '{"pairs": {"limit": 0}}'
+secretcli q compute query $(echo "$factory_contract" | tr -d '"') '{"pairs": {"start_after":[{"native_token":{"denom":"uscrt"}},{"token":{"contract_addr":'$token2_addr',"token_code_hash":'$token_code_hash',"viewing_key":""}}]}}' # TODO fix: this doesn't work 
+
+
+
+
