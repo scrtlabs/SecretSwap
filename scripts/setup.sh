@@ -114,7 +114,7 @@ secretcli q compute query $(echo "$factory_contract" | tr -d '"') '{"pairs": {}}
 secretcli q compute query $(echo "$factory_contract" | tr -d '"') '{"pairs": {"limit": 1}}'
 secretcli q compute query $(echo "$factory_contract" | tr -d '"') '{"pairs": {"limit": 2}}'
 secretcli q compute query $(echo "$factory_contract" | tr -d '"') '{"pairs": {"limit": 0}}'
-secretcli q compute query $(echo "$factory_contract" | tr -d '"') '{"pairs": {"start_after":[{"native_token":{"denom":"uscrt"}},{"token":{"contract_addr":'$token2_addr',"token_code_hash":'$token_code_hash',"viewing_key":""}}]}}' # TODO fix: this doesn't work 
+secretcli q compute query $(echo "$factory_contract" | tr -d '"') '{"pairs": {"start_after":[{"native_token":{"denom":"uscrt"}},{"token":{"contract_addr":'$token2_addr',"token_code_hash":'$token_code_hash',"viewing_key":""}}]}}' # TODO fix: start_after doesn't work 
 
 
 

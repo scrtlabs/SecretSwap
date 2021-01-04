@@ -20,7 +20,6 @@ use crate::msg::{
 };
 
 use crate::state::{read_pair_info, store_pair_info};
-use secret_toolkit::crypto::Prng;
 
 /// Commission rate == 0.3%
 const COMMISSION_RATE: &str = "0.003";
@@ -31,9 +30,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     msg: PairInitMsg,
 ) -> StdResult<InitResponse> {
     // create viewing key
-    let mut prng = Prng::new(&msg.prng_seed.0, &env.block.time.to_be_bytes());
-    let vk = prng.rand_bytes();
-    let vk_str = base64::encode(vk);
+    let assets_viewing_key = String::from("SecretSwap");
 
     let mut asset0 = msg.asset_infos[0].to_raw(&deps)?;
     let mut asset1 = msg.asset_infos[1].to_raw(&deps)?;
@@ -47,7 +44,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             ..
         } => {
             messages.push(snip20::set_viewing_key_msg(
-                vk_str.clone(),
+                assets_viewing_key.clone(),
                 None,
                 256,
                 msg.token_code_hash.clone(),
@@ -56,7 +53,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             asset0 = AssetInfoRaw::Token {
                 contract_addr: deps.api.canonical_address(&contract_addr)?,
                 token_code_hash: token_code_hash.clone(),
-                viewing_key: vk_str.clone(),
+                viewing_key: assets_viewing_key.clone(),
             };
         }
         _ => {}
@@ -68,7 +65,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             ..
         } => {
             messages.push(snip20::set_viewing_key_msg(
-                vk_str.clone(),
+                assets_viewing_key.clone(),
                 None,
                 256,
                 token_code_hash.clone(),
@@ -77,7 +74,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             asset1 = AssetInfoRaw::Token {
                 contract_addr: deps.api.canonical_address(&contract_addr)?,
                 token_code_hash: token_code_hash.clone(),
-                viewing_key: vk_str.clone(),
+                viewing_key: assets_viewing_key.clone(),
             };
         }
         _ => {}
