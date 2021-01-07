@@ -21,16 +21,16 @@ deployer_name=a
 deployer_address=$(secretcli keys show -a $deployer_name)
 echo "Deployer address: '$deployer_address'"
 
-docker exec -it "$docker_name" secretcli tx compute store "/root/code/build/secretswap_token.wasm" --from a --gas 2000000 -b block -y
+secretcli tx compute store "/root/code/build/secretswap_token.wasm" --from a --gas 2000000 -b block -y
 token_code_id=$(secretcli query compute list-code | jq '.[-1]."id"')
 token_code_hash=$(secretcli query compute list-code | jq '.[-1]."data_hash"')
 echo "Stored token: '$token_code_id', '$token_code_hash'"
 
-docker exec -it $docker_name secretcli tx compute store "/root/code/build/secretswap_factory.wasm" --from a --gas 2000000 -b block -y
+secretcli tx compute store "/root/code/build/secretswap_factory.wasm" --from a --gas 2000000 -b block -y
 factory_code_id=$(secretcli query compute list-code | jq '.[-1]."id"')
 echo "Stored factory: '$factory_code_id'"
 
-docker exec -it $docker_name secretcli tx compute store "/root/code/build/secretswap_pair.wasm" --from a --gas 2000000 -b block -y
+secretcli tx compute store "/root/code/build/secretswap_pair.wasm" --from a --gas 2000000 -b block -y
 pair_code_id=$(secretcli query compute list-code | jq '.[-1]."id"')
 pair_code_hash=$(secretcli query compute list-code | jq '.[-1]."data_hash"')
 echo "Stored pair: '$pair_code_id', '$pair_code_hash'"
@@ -44,7 +44,7 @@ export STORE_TX_HASH=$(
 )
 wait_for_tx "$STORE_TX_HASH" "Waiting for instantiate to finish on-chain..."
 
-token_addr=$(docker exec -it $docker_name secretcli query compute list-contract-by-code $token_code_id | jq '.[-1].address')
+token_addr=$(secretcli query compute list-contract-by-code $token_code_id | jq '.[-1].address')
 echo "Token address: '$token_addr'"
 
 label=$(date +"%T")
@@ -54,15 +54,15 @@ export STORE_TX_HASH=$(
 )
 wait_for_tx "$STORE_TX_HASH" "Waiting for instantiate to finish on-chain..."
 
-factory_contract=$(docker exec -it $docker_name secretcli query compute list-contract-by-code $factory_code_id | jq '.[-1].address')
+factory_contract=$(secretcli query compute list-contract-by-code $factory_code_id | jq '.[-1].address')
 echo "Factory address: '$factory_contract'"
 
 secretcli tx compute execute --label $label '{"create_pair": {"asset_infos": [{"native_token": {"denom": "uscrt"}},{"token": {"contract_addr": '$token_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}]}}' --from $deployer_name -y --gas 1500000 -b block
 
-pair_contract=$(docker exec -it $docker_name secretcli query compute list-contract-by-code $pair_code_id | jq '.[-1].address')
+pair_contract=$(secretcli query compute list-contract-by-code $pair_code_id | jq '.[-1].address')
 echo "Pair contract address: '$pair_contract'"
 
-lptoken=$(docker exec -it $docker_name secretcli query compute list-contract-by-code $token_code_id | jq '.[-1].address')
+lptoken=$(secretcli query compute list-contract-by-code $token_code_id | jq '.[-1].address')
 echo "LP Token address: '$lptoken'"
 
 secretcli tx compute execute $(echo "$token_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract', "amount": "1000000"}}' -b block -y --from $deployer_name
@@ -105,7 +105,7 @@ export STORE_TX_HASH=$(
 )
 wait_for_tx "$STORE_TX_HASH" "Waiting for instantiate to finish on-chain..."
 
-token2_addr=$(docker exec -it $docker_name secretcli query compute list-contract-by-code $token_code_id | jq '.[-1].address')
+token2_addr=$(secretcli query compute list-contract-by-code $token_code_id | jq '.[-1].address')
 echo "Token2 address: '$token2_addr'"
 
 secretcli tx compute execute $(echo "$factory_contract" | tr -d '"') '{"create_pair": {"asset_infos": [{"native_token": {"denom": "uscrt"}},{"token": {"contract_addr": '$token2_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}]}}' --from $deployer_name -y --gas 1500000 -b block
