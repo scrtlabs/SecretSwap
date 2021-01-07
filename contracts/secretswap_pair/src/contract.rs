@@ -50,6 +50,13 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 msg.token_code_hash.clone(),
                 contract_addr.clone(),
             )?);
+            messages.push(snip20::register_receive_msg(
+                env.contract_code_hash.clone(),
+                None,
+                256,
+                msg.token_code_hash.clone(),
+                contract_addr.clone(),
+            )?);
             asset0 = AssetInfoRaw::Token {
                 contract_addr: deps.api.canonical_address(&contract_addr)?,
                 token_code_hash: token_code_hash.clone(),
@@ -69,6 +76,13 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 None,
                 256,
                 token_code_hash.clone(),
+                contract_addr.clone(),
+            )?);
+            messages.push(snip20::register_receive_msg(
+                env.contract_code_hash.clone(),
+                None,
+                256,
+                msg.token_code_hash.clone(),
                 contract_addr.clone(),
             )?);
             asset1 = AssetInfoRaw::Token {
