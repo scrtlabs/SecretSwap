@@ -2,9 +2,9 @@
 
 set -xe
 
-docker_name=secretdev
 
 function secretcli() {
+  export docker_name=secretdev
   docker exec "$docker_name" secretcli "$@";
 }
 
@@ -15,22 +15,22 @@ function wait_for_tx() {
 }
 
 export SGX_MODE=SW
+export deployer_name=a
+export wasm_path=/root/code/build
 
-deployer_name=a
-
-deployer_address=$(secretcli keys show -a $deployer_name)
+export deployer_address=$(secretcli keys show -a $deployer_name)
 echo "Deployer address: '$deployer_address'"
 
-secretcli tx compute store "/root/code/build/secretswap_token.wasm" --from a --gas 2000000 -b block -y
+secretcli tx compute store "${wasm_path}/secretswap_token.wasm" --from "$deployer_name" --gas 2000000 -b block -y
 token_code_id=$(secretcli query compute list-code | jq '.[-1]."id"')
 token_code_hash=$(secretcli query compute list-code | jq '.[-1]."data_hash"')
 echo "Stored token: '$token_code_id', '$token_code_hash'"
 
-secretcli tx compute store "/root/code/build/secretswap_factory.wasm" --from a --gas 2000000 -b block -y
+secretcli tx compute store "${wasm_path}/secretswap_factory.wasm" --from "$deployer_name" --gas 2000000 -b block -y
 factory_code_id=$(secretcli query compute list-code | jq '.[-1]."id"')
 echo "Stored factory: '$factory_code_id'"
 
-secretcli tx compute store "/root/code/build/secretswap_pair.wasm" --from a --gas 2000000 -b block -y
+secretcli tx compute store "${wasm_path}/secretswap_pair.wasm" --from "$deployer_name" --gas 2000000 -b block -y
 pair_code_id=$(secretcli query compute list-code | jq '.[-1]."id"')
 pair_code_hash=$(secretcli query compute list-code | jq '.[-1]."data_hash"')
 echo "Stored pair: '$pair_code_id', '$pair_code_hash'"
