@@ -38,21 +38,23 @@ echo "Stored pair: '$pair_code_id', '$pair_code_hash'"
 echo "Deploying token..."
 label=$(date +"%T")
 
-export STORE_TX_HASH=$(
+export TX_HASH=$(
   secretcli tx compute instantiate $token_code_id '{"admin": "'$deployer_address'", "symbol": "TST", "decimals": 6, "initial_balances": [{"address": "'$deployer_address'", "amount": "1000000000"}], "prng_seed": "YWE", "name": "test"}' --from $deployer_name --gas 1500000 --label $label -b block -y |
   jq -r .txhash
 )
-wait_for_tx "$STORE_TX_HASH" "Waiting for instantiate to finish on-chain..."
+wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
+secretcli q compute tx $TX_HASH
 
 token_addr=$(secretcli query compute list-contract-by-code $token_code_id | jq '.[-1].address')
 echo "Token address: '$token_addr'"
 
 label=$(date +"%T")
-export STORE_TX_HASH=$(
+export TX_HASH=$(
   secretcli tx compute instantiate $factory_code_id '{"pair_code_id": '$pair_code_id', "pair_code_hash": '$pair_code_hash', "token_code_id": '$token_code_id', "token_code_hash": '$token_code_hash', "prng_seed": "YWE"}' --label $label --from $deployer_name -y |
   jq -r .txhash
 )
-wait_for_tx "$STORE_TX_HASH" "Waiting for instantiate to finish on-chain..."
+wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
+secretcli q compute tx $TX_HASH
 
 factory_contract=$(secretcli query compute list-contract-by-code $factory_code_id | jq '.[-1].address')
 echo "Factory address: '$factory_contract'"
@@ -85,11 +87,25 @@ balance=$(secretcli q account $deployer_address | jq '.value.coins[0].amount')
 
 echo "USCRT balance before swap: '$balance'"
 
-export STORE_TX_HASH=$(
+export TX_HASH=$(
   secretcli tx compute execute $(echo "$pair_contract" | tr -d '"') '{"swap": {"offer_asset": {"info": {"native_token": {"denom": "uscrt"}}, "amount": "1000"}}}' --amount 1000uscrt -b block -y --from $deployer_name --gas 1500000 |
   jq -r .txhash
 )
-wait_for_tx "$STORE_TX_HASH" "Waiting for instantiate to finish on-chain..."
+wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
+secretcli q compute tx $TX_HASH
+
+tbalance=$(secretcli q compute query $(echo "$token_addr" | tr -d '"') '{"balance": {"address": "'$deployer_address'", "key": "yo"}}' | jq '.balance.amount')
+echo "Token balance after swap: '$tbalance'"
+balance=$(secretcli q account $deployer_address | jq '.value.coins[0].amount')
+echo "USCRT balance after swap: '$balance'"
+
+
+export TX_HASH=$(
+  secretcli tx compute execute $(echo "$token_addr" | tr -d '"') "{\"send\": {\"recipient\": $pair_contract,\"amount\":\"1000\",\"msg\":\"eyJzd2FwIjp7fX0K\"}}" -b block -y --from $deployer_name --gas 1500000 |
+  jq -r .txhash
+)
+wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
+secretcli q compute tx $TX_HASH
 
 tbalance=$(secretcli q compute query $(echo "$token_addr" | tr -d '"') '{"balance": {"address": "'$deployer_address'", "key": "yo"}}' | jq '.balance.amount')
 echo "Token balance after swap: '$tbalance'"
@@ -99,11 +115,12 @@ echo "USCRT balance after swap: '$balance'"
 
 label=$(date +"%T")
 
-export STORE_TX_HASH=$(
-  secretcli tx compute instantiate $token_code_id '{"admin": "'$deployer_address'", "symbol": "TST2", "decimals": 6, "initial_balances": [{"address": "'$deployer_address'", "amount": "1000000000"}], "prng_seed": "YWE", "name": "test"}' --from $deployer_name --gas 1500000 --label "${label}" -b block -y |
+export TX_HASH=$(
+  secretcli tx compute instantiate $token_code_id '{"admin": "'$deployer_address'", "symbol": "TSTTST", "decimals": 6, "initial_balances": [{"address": "'$deployer_address'", "amount": "1000000000"}], "prng_seed": "YWE", "name": "test"}' --from $deployer_name --gas 1500000 --label "${label}" -b block -y |
   jq -r .txhash
 )
-wait_for_tx "$STORE_TX_HASH" "Waiting for instantiate to finish on-chain..."
+wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
+secretcli q compute tx $TX_HASH
 
 token2_addr=$(secretcli query compute list-contract-by-code $token_code_id | jq '.[-1].address')
 echo "Token2 address: '$token2_addr'"
