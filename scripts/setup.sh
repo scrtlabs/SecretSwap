@@ -39,7 +39,7 @@ echo "Deploying token..."
 label=$(date +"%T")
 
 export TX_HASH=$(
-  secretcli tx compute instantiate $token_code_id '{"admin": "'$deployer_address'", "symbol": "TST", "decimals": 6, "initial_balances": [{"address": "'$deployer_address'", "amount": "1000000000"}], "prng_seed": "YWE", "name": "test"}' --from $deployer_name --gas 1500000 --label $label -b block -y |
+  secretcli tx compute instantiate $token_code_id '{"admin": "'$deployer_address'", "symbol": "ETH", "decimals": 6, "initial_balances": [{"address": "'$deployer_address'", "amount": "100000000000"}], "prng_seed": "YWE", "name": "test"}' --from $deployer_name --gas 1500000 --label $label -b block -y |
   jq -r .txhash
 )
 wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
@@ -67,8 +67,8 @@ echo "Pair contract address: '$pair_contract'"
 lptoken=$(secretcli query compute list-contract-by-code $token_code_id | jq '.[-1].address')
 echo "LP Token address: '$lptoken'"
 
-secretcli tx compute execute $(echo "$token_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract', "amount": "1000000"}}' -b block -y --from $deployer_name
-secretcli tx compute execute $(echo "$pair_contract" | tr -d '"') '{"provide_liquidity": {"assets": [{"info": {"native_token": {"denom": "uscrt"}}, "amount": "1000000"}, {"info": {"token": {"contract_addr": '$token_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}, "amount": "1000000"}]}}' --amount 1000000uscrt --from $deployer_name -y --gas 1500000 -b block
+secretcli tx compute execute $(echo "$token_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract', "amount": "1000000000"}}' -b block -y --from $deployer_name
+secretcli tx compute execute $(echo "$pair_contract" | tr -d '"') '{"provide_liquidity": {"assets": [{"info": {"native_token": {"denom": "uscrt"}}, "amount": "100000000"}, {"info": {"token": {"contract_addr": '$token_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}, "amount": "1000000000"}]}}' --amount 100000000uscrt --from $deployer_name -y --gas 1500000 -b block
 
 secretcli tx compute execute $(echo "$lptoken" | tr -d '"') '{"set_viewing_key": {"key": "yo"}}' -b block -y --from $deployer_name
 
