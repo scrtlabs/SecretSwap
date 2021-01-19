@@ -62,6 +62,11 @@ compile-optimized-reproducible:
 		--mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
 		enigmampc/secret-contract-optimizer:1.0.4
 
+# After make start-server is streaming blocks, this will setup the AMM and send you some SCRT and ETH
+# change the secret1x6my6xxxkladvsupcka7k092m50rdw8pk8dpq9 to your address
+# scripts/setup.sh &&
+#	 docker exec -it secretdev secretcli tx send a secret1x6my6xxxkladvsupcka7k092m50rdw8pk8dpq9 100000000uscrt -y -b block &&
+#	 docker exec -it secretdev secretcli tx compute execute secret18vd8fpwxzck93qlwghaj6arh4p7c5n8978vsyg '{"transfer":{"recipient":"secret1x6my6xxxkladvsupcka7k092m50rdw8pk8dpq9","amount":"100000000"}}' --from a -y -b block
 .PHONY: start-server
 start-server: # CTRL+C to stop
 	docker run -it --rm \
