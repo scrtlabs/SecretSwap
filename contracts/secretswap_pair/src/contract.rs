@@ -282,6 +282,8 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
         asset.assert_sent_native_token_balance(&env)?;
     }
 
+    // Note: pair info + viewing keys are read from storage, therefore the input
+    // viewing keys to this function are not used
     let pair_info: PairInfoRaw = read_pair_info(&deps.storage)?;
     let mut pools: [Asset; 2] = pair_info.query_pools(deps, &env.contract.address)?;
     let deposits: [Uint128; 2] = [
