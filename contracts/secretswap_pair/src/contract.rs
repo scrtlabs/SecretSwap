@@ -136,7 +136,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     Ok(InitResponse {
         messages,
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
     })
 }
 

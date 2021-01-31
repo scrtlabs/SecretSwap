@@ -86,7 +86,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 msg: hook.msg,
                 send: vec![],
             })],
-            log: vec![],
+            log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         })
     } else {
         Ok(InitResponse::default())
@@ -233,7 +233,7 @@ fn try_burn<S: Storage, A: Api, Q: Querier>(
 
     let res = HandleResponse {
         messages: vec![],
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         data: Some(to_binary(&HandleAnswer::Burn { status: Success })?),
     };
 
@@ -289,7 +289,7 @@ fn try_mint<S: Storage, A: Api, Q: Querier>(
 
     let res = HandleResponse {
         messages: vec![],
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         data: Some(to_binary(&HandleAnswer::Mint { status: Success })?),
     };
 
@@ -407,7 +407,7 @@ fn change_admin<S: Storage, A: Api, Q: Querier>(
 
     Ok(HandleResponse {
         messages: vec![],
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         data: Some(to_binary(&HandleAnswer::ChangeAdmin { status: Success })?),
     })
 }
@@ -424,7 +424,7 @@ pub fn try_set_key<S: Storage, A: Api, Q: Querier>(
 
     Ok(HandleResponse {
         messages: vec![],
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         data: Some(to_binary(&HandleAnswer::SetViewingKey { status: Success })?),
     })
 }
@@ -444,7 +444,7 @@ pub fn try_create_key<S: Storage, A: Api, Q: Querier>(
 
     Ok(HandleResponse {
         messages: vec![],
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         data: Some(to_binary(&HandleAnswer::CreateViewingKey { key })?),
     })
 }
@@ -462,7 +462,7 @@ fn set_contract_status<S: Storage, A: Api, Q: Querier>(
 
     Ok(HandleResponse {
         messages: vec![],
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         data: Some(to_binary(&HandleAnswer::SetContractStatus {
             status: Success,
         })?),
@@ -528,7 +528,7 @@ fn try_transfer<S: Storage, A: Api, Q: Querier>(
 
     let res = HandleResponse {
         messages: vec![],
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         data: Some(to_binary(&HandleAnswer::Transfer { status: Success })?),
     };
     Ok(res)
@@ -578,7 +578,7 @@ fn try_send<S: Storage, A: Api, Q: Querier>(
 
     let res = HandleResponse {
         messages,
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         data: Some(to_binary(&HandleAnswer::Send { status: Success })?),
     };
     Ok(res)
@@ -592,7 +592,7 @@ fn try_register_receive<S: Storage, A: Api, Q: Querier>(
     set_receiver_hash(&mut deps.storage, &env.message.sender, code_hash);
     let res = HandleResponse {
         messages: vec![],
-        log: vec![log("register_status", "success")],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         data: Some(to_binary(&HandleAnswer::RegisterReceive {
             status: Success,
         })?),
@@ -676,7 +676,7 @@ fn try_transfer_from<S: Storage, A: Api, Q: Querier>(
 
     let res = HandleResponse {
         messages: vec![],
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         data: Some(to_binary(&HandleAnswer::TransferFrom { status: Success })?),
     };
     Ok(res)
@@ -707,7 +707,7 @@ fn try_send_from<S: Storage, A: Api, Q: Querier>(
 
     let res = HandleResponse {
         messages,
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         data: Some(to_binary(&HandleAnswer::SendFrom { status: Success })?),
     };
     Ok(res)
@@ -738,7 +738,7 @@ fn try_increase_allowance<S: Storage, A: Api, Q: Querier>(
 
     let res = HandleResponse {
         messages: vec![],
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         data: Some(to_binary(&HandleAnswer::IncreaseAllowance {
             owner: env.message.sender,
             spender,
@@ -773,7 +773,7 @@ fn try_decrease_allowance<S: Storage, A: Api, Q: Querier>(
 
     let res = HandleResponse {
         messages: vec![],
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         data: Some(to_binary(&HandleAnswer::DecreaseAllowance {
             owner: env.message.sender,
             spender,
@@ -796,7 +796,7 @@ fn add_minters<S: Storage, A: Api, Q: Querier>(
 
     Ok(HandleResponse {
         messages: vec![],
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         data: Some(to_binary(&HandleAnswer::AddMinters { status: Success })?),
     })
 }
@@ -814,7 +814,7 @@ fn remove_minters<S: Storage, A: Api, Q: Querier>(
 
     Ok(HandleResponse {
         messages: vec![],
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         data: Some(to_binary(&HandleAnswer::RemoveMinters { status: Success })?),
     })
 }
@@ -832,7 +832,7 @@ fn set_minters<S: Storage, A: Api, Q: Querier>(
 
     Ok(HandleResponse {
         messages: vec![],
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         data: Some(to_binary(&HandleAnswer::SetMinters { status: Success })?),
     })
 }
