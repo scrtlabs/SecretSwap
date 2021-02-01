@@ -109,9 +109,12 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     messages.extend(vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
         code_id: msg.token_code_id,
         msg: to_binary(&TokenInitMsg::new(
-            "secretswap liquidity token".to_string(),
+            format!(
+                "SecretSwap Liquidity Provider (LP) token for {}-{}",
+                &msg.asset_infos[0], &msg.asset_infos[1]
+            ),
             env.contract.address.clone(),
-            "uLP".to_string(),
+            "SWAP-LP".to_string(),
             6,
             msg.prng_seed,
             InitHook {
@@ -121,7 +124,10 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             },
         ))?,
         send: vec![],
-        label: format!("{}-{}-token", &msg.asset_infos[0], &msg.asset_infos[1]),
+        label: format!(
+            "{}-{}-SecretSwap-LP-Token",
+            &msg.asset_infos[0], &msg.asset_infos[1]
+        ),
         callback_code_hash: msg.token_code_hash,
     })]);
 

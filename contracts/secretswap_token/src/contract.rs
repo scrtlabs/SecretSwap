@@ -49,12 +49,12 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     // Check name, symbol, decimals
     if !is_valid_name(&msg.name) {
         return Err(StdError::generic_err(
-            "Name is not in the expected format (3-30 UTF-8 bytes)",
+            "Name is not in the expected format (3-200 UTF-8 bytes)",
         ));
     }
     if !is_valid_symbol(&msg.symbol) {
         return Err(StdError::generic_err(
-            "Ticker symbol is not in expected format [A-Z]{3,6}",
+            "Ticker symbol is not in expected format [A-Za-z-]{3,12}",
         ));
     }
     if msg.decimals > 18 {
@@ -886,7 +886,7 @@ fn check_if_admin<S: Storage>(config: &Config<S>, account: &HumanAddr) -> StdRes
 
 fn is_valid_name(name: &str) -> bool {
     let len = name.len();
-    3 <= len && len <= 30
+    3 <= len && len <= 200
 }
 
 fn is_valid_symbol(symbol: &str) -> bool {
@@ -894,9 +894,9 @@ fn is_valid_symbol(symbol: &str) -> bool {
     let len_is_valid = 3 <= len && len <= 12;
 
     len_is_valid
-        && symbol
-            .bytes()
-            .all(|byte| (b'A' <= byte && byte <= b'Z') || (b'a' <= byte && byte <= b'z'))
+        && symbol.bytes().all(|byte| {
+            (b'A' <= byte && byte <= b'Z') || (b'a' <= byte && byte <= b'z') || byte == b'-'
+        })
 }
 
 #[cfg(test)]
