@@ -149,7 +149,12 @@ pub fn try_create_pair<S: Storage, A: Api, Q: Querier>(
     let mut messages: Vec<CosmosMsg> = vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
         code_id: config.pair_code_id,
         send: vec![],
-        label: format!("{}-{}-pair", asset_infos[0], asset_infos[1]),
+        label: format!(
+            "{}-{}-pair-{}",
+            asset_infos[0],
+            asset_infos[1],
+            env.contract.address.clone()
+        ),
         msg: to_binary(&PairInitMsg {
             asset_infos: asset_infos.clone(),
             token_code_id: config.token_code_id,

@@ -119,14 +119,16 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             msg.prng_seed,
             InitHook {
                 msg: to_binary(&HandleMsg::PostInitialize {})?,
-                contract_addr: env.contract.address,
+                contract_addr: env.contract.address.clone(),
                 code_hash: env.contract_code_hash,
             },
         ))?,
         send: vec![],
         label: format!(
-            "{}-{}-SecretSwap-LP-Token",
-            &msg.asset_infos[0], &msg.asset_infos[1]
+            "{}-{}-SecretSwap-LP-Token-{}",
+            &msg.asset_infos[0],
+            &msg.asset_infos[1],
+            &env.contract.address.clone()
         ),
         callback_code_hash: msg.token_code_hash,
     })]);
