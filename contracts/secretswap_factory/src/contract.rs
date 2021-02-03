@@ -150,10 +150,11 @@ pub fn try_create_pair<S: Storage, A: Api, Q: Querier>(
         code_id: config.pair_code_id,
         send: vec![],
         label: format!(
-            "{}-{}-pair-{}",
+            "{}-{}-pair-{}-{}",
             asset_infos[0],
             asset_infos[1],
-            env.contract.address.clone()
+            env.contract.address.clone(),
+            config.pair_code_id
         ),
         msg: to_binary(&PairInitMsg {
             asset_infos: asset_infos.clone(),
