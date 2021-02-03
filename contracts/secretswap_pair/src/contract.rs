@@ -1,9 +1,9 @@
-use std::str::FromStr;
+use std::ops::{Add, Mul, Sub};
 
 use cosmwasm_std::{
-    from_binary, log, to_binary, Api, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal, Env, Extern,
-    HandleResponse, HandleResult, HumanAddr, InitResponse, Querier, StdError, StdResult, Storage,
-    Uint128, WasmMsg,
+    debug_print, from_binary, log, to_binary, Api, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal,
+    Env, Extern, HandleResponse, HandleResult, HumanAddr, InitResponse, Querier, StdError,
+    StdResult, Storage, Uint128, WasmMsg,
 };
 use integer_sqrt::IntegerSquareRoot;
 //use ::{Cw20HandleMsg, Cw20ReceiveMsg, MinterResponse};
@@ -22,7 +22,8 @@ use crate::msg::{
 use crate::state::{read_pair_info, store_pair_info};
 
 /// Commission rate == 0.3%
-const COMMISSION_RATE: &str = "0.003";
+const COMMISSION_RATE_NOM: Uint128 = Uint128(3);
+const COMMISSION_RATE_DENOM: Uint128 = Uint128(1000);
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -47,14 +48,14 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 assets_viewing_key.clone(),
                 None,
                 256,
-                msg.token_code_hash.clone(),
+                token_code_hash.clone(),
                 contract_addr.clone(),
             )?);
             messages.push(snip20::register_receive_msg(
                 env.contract_code_hash.clone(),
                 None,
                 256,
-                msg.token_code_hash.clone(),
+                token_code_hash.clone(),
                 contract_addr.clone(),
             )?);
             asset0 = AssetInfoRaw::Token {
@@ -82,7 +83,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
                 env.contract_code_hash.clone(),
                 None,
                 256,
-                msg.token_code_hash.clone(),
+                token_code_hash.clone(),
                 contract_addr.clone(),
             )?);
             asset1 = AssetInfoRaw::Token {
@@ -97,8 +98,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     let pair_info: &PairInfoRaw = &PairInfoRaw {
         contract_addr: deps.api.canonical_address(&env.contract.address)?,
         liquidity_token: CanonicalAddr::default(),
-        asset_infos: [asset0, asset1],
         token_code_hash: msg.token_code_hash.clone(),
+        asset_infos: [asset0, asset1],
     };
 
     // create viewing keys
@@ -162,6 +163,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         } => try_provide_liquidity(deps, env, assets, slippage_tolerance),
         HandleMsg::Swap {
             offer_asset,
+            expected_return,
             belief_price,
             max_spread,
             to,
@@ -175,6 +177,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 env.clone(),
                 env.message.sender,
                 offer_asset,
+                expected_return,
                 belief_price,
                 max_spread,
                 to,
@@ -195,6 +198,7 @@ pub fn receive_cw20<S: Storage, A: Api, Q: Querier>(
     if let Some(bin_msg) = msg {
         match from_binary(&bin_msg)? {
             Cw20HookMsg::Swap {
+                expected_return,
                 belief_price,
                 max_spread,
                 to,
@@ -227,6 +231,7 @@ pub fn receive_cw20<S: Storage, A: Api, Q: Querier>(
                         },
                         amount,
                     },
+                    expected_return,
                     belief_price,
                     max_spread,
                     to,
@@ -435,6 +440,7 @@ pub fn try_swap<S: Storage, A: Api, Q: Querier>(
     env: Env,
     sender: HumanAddr,
     offer_asset: Asset,
+    expected_return: Option<Uint128>,
     belief_price: Option<Decimal>,
     max_spread: Option<Decimal>,
     to: Option<HumanAddr>,
@@ -474,8 +480,10 @@ pub fn try_swap<S: Storage, A: Api, Q: Querier>(
     assert_max_spread(
         belief_price,
         max_spread,
+        expected_return,
         offer_amount,
-        return_amount + commission_amount,
+        return_amount,
+        commission_amount,
         spread_amount,
     )?;
 
@@ -630,18 +638,46 @@ fn compute_swap(
 ) -> StdResult<(Uint128, Uint128, Uint128)> {
     // offer => ask
     // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - commission_rate)
+    debug_print!("cp = offer_pool {} * ask_pool {}", offer_pool, ask_pool);
     let cp = Uint128(offer_pool.u128() * ask_pool.u128());
-    let return_amount = (ask_pool - cp.multiply_ratio(1u128, offer_pool + offer_amount))?;
+    debug_print!("cp = {}", cp);
+
+    debug_print!("return_amount = (ask_pool {} - cp {}.multiply_ratio(1u128, offer_pool {} + offer_amount {}))",ask_pool,cp,offer_pool,offer_amount);
+    let return_amount: Uint128 = (ask_pool - cp.multiply_ratio(1u128, offer_pool + offer_amount))?;
+    debug_print!("return_amount = {}", return_amount);
 
     // calculate spread & commission
-    let spread_amount: Uint128 = (offer_amount * Decimal::from_ratio(ask_pool, offer_pool)
-        - return_amount)
-        .unwrap_or_else(|_| Uint128::zero());
-    let commission_amount: Uint128 = return_amount * Decimal::from_str(&COMMISSION_RATE).unwrap();
+    debug_print!("spread_amount = (offer_amount {} * Decimal::from_ratio(ask_pool {}, offer_pool {}) - return_amount {})",offer_amount,ask_pool,offer_pool,return_amount);
+    let spread_amount: Uint128 = (offer_amount
+        .multiply_ratio(ask_pool, offer_pool)
+        .sub(return_amount))
+    .unwrap_or_else(|_| Uint128::zero());
+    debug_print!("spread_amount = {}", spread_amount);
+    debug_print!(
+        "commission_amount = (return_amount {}).multiply_ratio(COMMISSION_RATE_NOM {}, COMMISSION_RATE_DENOM {})",
+        return_amount,
+        COMMISSION_RATE_NOM,
+        COMMISSION_RATE_DENOM,
+    );
+    let commission_amount: Uint128 =
+        return_amount.multiply_ratio(COMMISSION_RATE_NOM, COMMISSION_RATE_DENOM);
+    debug_print!("commission_amount = {}", commission_amount);
 
     // commission will be absorbed to pool
-    let return_amount: Uint128 = (return_amount - commission_amount).unwrap();
+    debug_print!(
+        "return_amount = return_amount {} - commission_amount {}",
+        return_amount,
+        commission_amount
+    );
+    let return_amount: Uint128 = return_amount.sub(commission_amount)?;
+    debug_print!("return_amount = {}", return_amount);
 
+    debug_print!(
+        "Ok((return_amount {}, spread_amount {}, commission_amount {}))",
+        return_amount,
+        spread_amount,
+        commission_amount
+    );
     Ok((return_amount, spread_amount, commission_amount))
 }
 
@@ -653,8 +689,10 @@ fn compute_offer_amount(
     // ask => offer
     // offer_amount = cp / (ask_pool - ask_amount / (1 - commission_rate)) - offer_pool
     let cp = Uint128(offer_pool.u128() * ask_pool.u128());
-    let one_minus_commission =
-        decimal_subtraction(Decimal::one(), Decimal::from_str(&COMMISSION_RATE).unwrap())?;
+    let one_minus_commission = decimal_subtraction(
+        Decimal::one(),
+        Decimal::from_ratio(COMMISSION_RATE_NOM, COMMISSION_RATE_DENOM),
+    )?;
 
     let offer_amount: Uint128 = (cp.multiply_ratio(
         1u128,
@@ -665,8 +703,8 @@ fn compute_offer_amount(
     let spread_amount = (offer_amount * Decimal::from_ratio(ask_pool, offer_pool)
         - before_commission_deduction)
         .unwrap_or_else(|_| Uint128::zero());
-    let commission_amount =
-        before_commission_deduction * Decimal::from_str(&COMMISSION_RATE).unwrap();
+    let commission_amount = before_commission_deduction
+        * Decimal::from_ratio(COMMISSION_RATE_NOM, COMMISSION_RATE_DENOM);
     Ok((offer_amount, spread_amount, commission_amount))
 }
 
@@ -676,21 +714,35 @@ fn compute_offer_amount(
 pub fn assert_max_spread(
     belief_price: Option<Decimal>,
     max_spread: Option<Decimal>,
+    expected_return: Option<Uint128>,
     offer_amount: Uint128,
     return_amount: Uint128,
+    commission_amount: Uint128,
     spread_amount: Uint128,
 ) -> StdResult<()> {
-    if let (Some(max_spread), Some(belief_price)) = (max_spread, belief_price) {
-        let expected_return = offer_amount * reverse_decimal(belief_price);
-        let spread_amount = (expected_return - return_amount).unwrap_or_else(|_| Uint128::zero());
+    if let Some(expected_return) = expected_return {
+        if return_amount.lt(&expected_return) {
+            return Err(StdError::generic_err(
+                "Operation fell short of expected_return",
+            ));
+        }
+    } else if let (Some(max_spread), Some(belief_price)) = (max_spread, belief_price) {
+        let return_amount = return_amount + commission_amount;
+        let expected_return = offer_amount.mul(reverse_decimal(belief_price));
 
-        if return_amount < expected_return
-            && Decimal::from_ratio(spread_amount, expected_return) > max_spread
+        let spread_amount =
+            (expected_return.sub(return_amount)).unwrap_or_else(|_| Uint128::zero());
+
+        if return_amount.lt(&expected_return)
+            && Decimal::from_ratio(spread_amount, expected_return).gt(&max_spread)
         {
-            return Err(StdError::generic_err("Operation exceeds max spread limit"));
+            return Err(StdError::generic_err(
+                "Operation exceeds max spread limit with belief_price",
+            ));
         }
     } else if let Some(max_spread) = max_spread {
-        if Decimal::from_ratio(spread_amount, return_amount + spread_amount) > max_spread {
+        let return_amount = return_amount + commission_amount;
+        if Decimal::from_ratio(spread_amount, return_amount.add(spread_amount)).gt(&max_spread) {
             return Err(StdError::generic_err("Operation exceeds max spread limit"));
         }
     }
