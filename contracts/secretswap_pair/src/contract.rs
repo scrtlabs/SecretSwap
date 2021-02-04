@@ -393,11 +393,29 @@ pub fn try_withdraw_liquidity<S: Storage, A: Api, Q: Querier>(
     let pools: [Asset; 2] = pair_info.query_pools(&deps, &env.contract.address)?;
     let total_share: Uint128 = query_supply(&deps, &liquidity_addr, &pair_info.token_code_hash)?;
 
-    let refund_assets: Vec<Asset> = pools
+    let refund_assets: Vec<StdResult<Asset>> = pools
         .iter()
-        .map(|a| Asset {
-            info: a.info.clone(),
-            amount: a.amount.multiply_ratio(amount, total_share),
+        .map(|a| {
+            // new_asset_amount = a.mount * amount / total_share
+
+            let asset_amount_mul_amount = U256::from(a.amount.u128())
+                .checked_mul(U256::from(amount.u128()))
+                .ok_or(StdError::generic_err(format!(
+                    "Cannot calculate a.amount {} * amount {}",
+                    a.amount, amount
+                )))?;
+
+            let new_asset_amount = asset_amount_mul_amount
+                .checked_div(U256::from(total_share.u128()))
+                .ok_or(StdError::generic_err(format!(
+                    "Cannot calculate asset_amount_mul_amount {} / total_share {}",
+                    asset_amount_mul_amount, total_share
+                )))?;
+
+            Ok(Asset {
+                info: a.info.clone(),
+                amount: Uint128(new_asset_amount.low_u128()),
+            })
         })
         .collect();
 
@@ -405,14 +423,16 @@ pub fn try_withdraw_liquidity<S: Storage, A: Api, Q: Querier>(
     Ok(HandleResponse {
         messages: vec![
             // refund asset tokens
-            refund_assets[0].clone().into_msg(
+            refund_assets[0]?.clone().into_msg(
                 deps,
                 env.contract.address.clone(),
                 sender.clone(),
             )?,
-            refund_assets[1]
-                .clone()
-                .into_msg(&deps, env.contract.address, sender)?,
+            refund_assets[1]?.clone().into_msg(
+                deps,
+                env.contract.address.clone(),
+                sender.clone(),
+            )?,
             // burn liquidity token
             snip20::burn_msg(
                 amount,
@@ -490,12 +510,9 @@ pub fn try_swap<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::generic_err("Wrong asset info is given"));
     }
 
-    let offer_amount = U256::from(offer_asset.amount.u128());
-    let (return_amount, spread_amount, commission_amount) = compute_swap(
-        U256::from(offer_pool.amount.u128()),
-        U256::from(ask_pool.amount.u128()),
-        offer_amount,
-    )?;
+    let offer_amount = offer_asset.amount;
+    let (return_amount, spread_amount, commission_amount) =
+        compute_swap(offer_pool.amount, ask_pool.amount, offer_amount)?;
 
     // check max spread limit if exist
     assert_max_spread(
@@ -650,11 +667,15 @@ pub fn amount_of(coins: &[Coin], denom: String) -> Uint128 {
 }
 
 fn compute_swap(
-    offer_pool: U256,
-    ask_pool: U256,
-    offer_amount: U256,
-) -> StdResult<(U256, U256, U256)> {
+    offer_pool: Uint128,
+    ask_pool: Uint128,
+    offer_amount: Uint128,
+) -> StdResult<(Uint128, Uint128, Uint128)> {
     // offer => ask
+    let offer_pool = U256::from(offer_pool.u128());
+    let ask_pool = U256::from(ask_pool.u128());
+    let offer_amount = U256::from(offer_amount.u128());
+
     // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - commission_rate)
     let cp = offer_pool
         .checked_mul(ask_pool)
@@ -734,7 +755,11 @@ fn compute_swap(
                 return_amount, commission_amount
             )))?;
 
-    Ok((return_amount, spread_amount, commission_amount))
+    Ok((
+        Uint128(return_amount.low_u128()),
+        Uint128(spread_amount.low_u128()),
+        Uint128(commission_amount.low_u128()),
+    ))
 }
 
 fn compute_offer_amount(
@@ -764,17 +789,18 @@ fn compute_offer_amount(
     Ok((offer_amount, spread_amount, commission_amount))
 }
 
-/// If `belief_price` and `max_spread` both are given,
+/// If `expected_return` is given, we check against `return_amount`
+/// Else if `belief_price` and `max_spread` both are given,
 /// we compute new spread else we just use terraswap
 /// spread to check `max_spread`
 pub fn assert_max_spread(
     belief_price: Option<Decimal>,
     max_spread: Option<Decimal>,
     expected_return: Option<Uint128>,
-    offer_amount: U256,
-    return_amount: U256,
-    commission_amount: U256,
-    spread_amount: U256,
+    offer_amount: Uint128,
+    return_amount: Uint128,
+    commission_amount: Uint128,
+    spread_amount: Uint128,
 ) -> StdResult<()> {
     if let Some(expected_return) = expected_return {
         if return_amount.lt(&expected_return) {
