@@ -55,6 +55,13 @@ _compile-optimized:
 	# wasm-opt -Os ./target/wasm32-unknown-unknown/release/*.wasm -o .
 	cp ./target/wasm32-unknown-unknown/release/*.wasm ./build/
 
+.PHONY: compile-w-debug-print _compile-w-debug-print
+compile-w-debug-print: _compile-w-debug-print
+_compile-w-debug-print:
+	RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+	cd contracts/secretswap_pair && RUSTFLAGS='-C link-arg=-s' cargo build --release --features debug-print --target wasm32-unknown-unknown --locked
+	cp ./target/wasm32-unknown-unknown/release/*.wasm ./build/
+
 .PHONY: compile-optimized-reproducible
 compile-optimized-reproducible:
 	docker run --rm -v "$$(pwd)":/contract \

@@ -20,15 +20,14 @@ default = []
 # for quicker tests, cargo test --lib
 # for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
+debug-print = ["cosmwasm-std/debug-print"]
 
 [dependencies]
 integer-sqrt = "0.1.5"
 secretswap = { path = "../../packages/secretswap", default-features = false, version = "0.1.0" }
 secret-toolkit = { git = "https://github.com/enigmampc/secret-toolkit", branch = "debug-print" }
 cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", branch = "debug-print" }
-cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", branch = "debug-print", features = [
-    "debug-print"
-] }
+cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", branch = "debug-print" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 base64 = "0.13.0"

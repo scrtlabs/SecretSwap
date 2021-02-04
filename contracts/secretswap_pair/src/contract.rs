@@ -1,9 +1,9 @@
 use std::ops::{Add, Mul, Sub};
 
 use cosmwasm_std::{
-    from_binary, log, to_binary, Api, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal, Env, Extern,
-    HandleResponse, HandleResult, HumanAddr, InitResponse, Querier, StdError, StdResult, Storage,
-    Uint128, WasmMsg,
+    debug_print, from_binary, log, to_binary, Api, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal,
+    Env, Extern, HandleResponse, HandleResult, HumanAddr, InitResponse, Querier, StdError,
+    StdResult, Storage, Uint128, WasmMsg,
 };
 use integer_sqrt::IntegerSquareRoot;
 //use ::{Cw20HandleMsg, Cw20ReceiveMsg, MinterResponse};
@@ -392,12 +392,11 @@ pub fn try_withdraw_liquidity<S: Storage, A: Api, Q: Querier>(
     let pools: [Asset; 2] = pair_info.query_pools(&deps, &env.contract.address)?;
     let total_share: Uint128 = query_supply(&deps, &liquidity_addr, &pair_info.token_code_hash)?;
 
-    let share_ratio: Decimal = Decimal::from_ratio(amount, total_share);
     let refund_assets: Vec<Asset> = pools
         .iter()
         .map(|a| Asset {
             info: a.info.clone(),
-            amount: a.amount * share_ratio,
+            amount: a.amount.multiply_ratio(amount, total_share),
         })
         .collect();
 
