@@ -58,7 +58,7 @@ secretcli q compute tx $TX_HASH
 factory_contract=$(secretcli query compute list-contract-by-code $factory_code_id | jq '.[-1].address')
 echo "Factory address: '$factory_contract'"
 
-secretcli tx compute execute --label $label '{"create_pair": {"asset_infos": [{"native_token": {"denom": "uscrt"}},{"token": {"contract_addr": '$token_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}]}}' --from $deployer_name -y --gas 1500000 -b block
+secretcli tx compute execute --label $label '{"create_pair": {"asset_infos": [{"token": {"contract_addr": '$token_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}},{"native_token": {"denom": "uscrt"}}]}}' --from $deployer_name -y --gas 1500000 -b block
 
 pair_contract=$(secretcli query compute list-contract-by-code $pair_code_id | jq '.[-1].address')
 echo "Pair contract address: '$pair_contract'"
