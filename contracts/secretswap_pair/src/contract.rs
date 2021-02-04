@@ -6,6 +6,7 @@ use cosmwasm_std::{
     StdResult, Storage, Uint128, WasmMsg,
 };
 use integer_sqrt::IntegerSquareRoot;
+use primitive_types::U256;
 //use ::{Cw20HandleMsg, Cw20ReceiveMsg, MinterResponse};
 use secret_toolkit::snip20;
 
@@ -22,8 +23,8 @@ use crate::msg::{
 use crate::state::{read_pair_info, store_pair_info};
 
 /// Commission rate == 0.3%
-const COMMISSION_RATE_NOM: Uint128 = Uint128(3);
-const COMMISSION_RATE_DENOM: Uint128 = Uint128(1000);
+const COMMISSION_RATE_NOM: U256 = U256::from(3);
+const COMMISSION_RATE_DENOM: U256 = U256::from(1000);
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -456,14 +457,32 @@ pub fn try_swap<S: Storage, A: Api, Q: Querier>(
     // If the asset balance is already increased
     // To calculated properly we should subtract user deposit from the pool
     if offer_asset.info.equal(&pools[0].info) {
+        let pool_amount = U256::from(pools[0].amount.u128());
+        let offer_amount = U256::from(offer_asset.amount.u128());
+
+        let amount = pool_amount
+            .checked_sub(offer_amount)
+            .ok_or(StdError::generic_err(
+                "offer_amount larger than pool_amount + offer_amount",
+            ))?;
+
         offer_pool = Asset {
-            amount: (pools[0].amount - offer_asset.amount)?,
+            amount: Uint128(amount.unwrap().low_u128()),
             info: pools[0].info.clone(),
         };
         ask_pool = pools[1].clone();
     } else if offer_asset.info.equal(&pools[1].info) {
+        let pool_amount = U256::from(pools[1].amount.u128());
+        let offer_amount = U256::from(offer_asset.amount.u128());
+
+        let amount = pool_amount
+            .checked_sub(offer_amount)
+            .ok_or(StdError::generic_err(
+                "offer_amount larger than pool_amount + offer_amount",
+            ))?;
+
         offer_pool = Asset {
-            amount: (pools[1].amount - offer_asset.amount)?,
+            amount: Uint128(amount.unwrap().low_u128()),
             info: pools[1].info.clone(),
         };
         ask_pool = pools[0].clone();
@@ -471,9 +490,12 @@ pub fn try_swap<S: Storage, A: Api, Q: Querier>(
         return Err(StdError::generic_err("Wrong asset info is given"));
     }
 
-    let offer_amount = offer_asset.amount;
-    let (return_amount, spread_amount, commission_amount) =
-        compute_swap(offer_pool.amount, ask_pool.amount, offer_amount)?;
+    let offer_amount = U256::from(offer_asset.amount.u128());
+    let (return_amount, spread_amount, commission_amount) = compute_swap(
+        U256::from(offer_pool.amount.u128()),
+        U256::from(ask_pool.amount.u128()),
+        offer_amount,
+    )?;
 
     // check max spread limit if exist
     assert_max_spread(
@@ -492,8 +514,6 @@ pub fn try_swap<S: Storage, A: Api, Q: Querier>(
         amount: return_amount,
     };
 
-    let tax_amount = return_asset.compute_tax(&deps)?;
-
     // 1. send collateral token from the contract to a user
     // 2. send inactive commission to collector
     Ok(HandleResponse {
@@ -508,7 +528,6 @@ pub fn try_swap<S: Storage, A: Api, Q: Querier>(
             log("ask_asset", ask_pool.info.to_string()),
             log("offer_amount", offer_amount.to_string()),
             log("return_amount", return_amount.to_string()),
-            log("tax_amount", tax_amount.to_string()),
             log("spread_amount", spread_amount.to_string()),
             log("commission_amount", commission_amount.to_string()),
         ],
@@ -631,27 +650,89 @@ pub fn amount_of(coins: &[Coin], denom: String) -> Uint128 {
 }
 
 fn compute_swap(
-    offer_pool: Uint128,
-    ask_pool: Uint128,
-    offer_amount: Uint128,
-) -> StdResult<(Uint128, Uint128, Uint128)> {
+    offer_pool: U256,
+    ask_pool: U256,
+    offer_amount: U256,
+) -> StdResult<(U256, U256, U256)> {
     // offer => ask
     // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - commission_rate)
-    let cp = Uint128(offer_pool.u128() * ask_pool.u128());
+    let cp = offer_pool
+        .checked_mul(ask_pool)
+        .ok_or(StdError::generic_err(format!(
+            "Cannot calculate offer_pool {} * ask_pool {}",
+            offer_pool, ask_pool
+        )))?;
 
-    let return_amount: Uint128 = (ask_pool - cp.multiply_ratio(1u128, offer_pool + offer_amount))?;
+    let new_offer_pool = offer_pool
+        .checked_add(offer_amount)
+        .ok_or(StdError::generic_err(format!(
+            "Cannot calculate offer_pool {} + offer_amount {}",
+            offer_pool, offer_amount
+        )))?;
+
+    let cp_div_new_offer_pool =
+        cp.checked_div(new_offer_pool)
+            .ok_or(StdError::generic_err(format!(
+                "Cannot calculate cp {} / new_offer_pool {}",
+                cp, new_offer_pool
+            )))?;
+
+    let return_amount =
+        ask_pool
+            .checked_sub(cp_div_new_offer_pool)
+            .ok_or(StdError::generic_err(format!(
+                "Cannot calculate ask_pool {} - cp_div_new_offer_pool {}",
+                ask_pool, cp_div_new_offer_pool
+            )))?;
 
     // calculate spread & commission
-    let spread_amount: Uint128 = (offer_amount
-        .multiply_ratio(ask_pool, offer_pool)
-        .sub(return_amount))
-    .unwrap_or_else(|_| Uint128::zero());
+    // spread = offer_amount * ask_pool / offer_pool - return_amount
+    let offer_amount_mul_ask_pool =
+        offer_amount
+            .checked_mul(ask_pool)
+            .ok_or(StdError::generic_err(format!(
+                "Cannot calculate offer_amount {} * ask_pool {}",
+                offer_amount, ask_pool
+            )))?;
 
-    let commission_amount: Uint128 =
-        return_amount.multiply_ratio(COMMISSION_RATE_NOM, COMMISSION_RATE_DENOM);
+    let offer_amount_mul_ask_pool_div_offer_pool = offer_amount_mul_ask_pool
+        .checked_div(offer_pool)
+        .ok_or(StdError::generic_err(format!(
+            "Cannot calculate offer_amount_mul_ask_pool {} / offer_pool {}",
+            offer_amount_mul_ask_pool, offer_pool
+        )))?;
+
+    let spread_amount = offer_amount_mul_ask_pool_div_offer_pool
+        .checked_sub(return_amount)
+        .ok_or(StdError::generic_err(format!(
+            "Cannot calculate offer_amount_mul_ask_pool_div_offer_pool {} - return_amount {}",
+            offer_amount_mul_ask_pool_div_offer_pool, return_amount
+        )))?;
+
+    // commission_amount = return_amount * COMMISSION_RATE_NOM / COMMISSION_RATE_DENOM
+    let commission_amount_nom =
+        return_amount
+            .checked_mul(COMMISSION_RATE_NOM)
+            .ok_or(StdError::generic_err(format!(
+                "Cannot calculate return_amount {} * COMMISSION_RATE_NOM {}",
+                return_amount, COMMISSION_RATE_NOM
+            )))?;
+
+    let commission_amount = commission_amount_nom
+        .checked_div(COMMISSION_RATE_DENOM)
+        .ok_or(StdError::generic_err(format!(
+            "Cannot calculate commission_amount_nom {} / COMMISSION_RATE_DENOM {}",
+            commission_amount_nom, COMMISSION_RATE_DENOM
+        )))?;
 
     // commission will be absorbed to pool
-    let return_amount: Uint128 = return_amount.sub(commission_amount)?;
+    let return_amount =
+        return_amount
+            .checked_sub(commission_amount)
+            .ok_or(StdError::generic_err(format!(
+                "Cannot calculate return_amount {} - commission_amount {}",
+                return_amount, commission_amount
+            )))?;
 
     Ok((return_amount, spread_amount, commission_amount))
 }
@@ -690,10 +771,10 @@ pub fn assert_max_spread(
     belief_price: Option<Decimal>,
     max_spread: Option<Decimal>,
     expected_return: Option<Uint128>,
-    offer_amount: Uint128,
-    return_amount: Uint128,
-    commission_amount: Uint128,
-    spread_amount: Uint128,
+    offer_amount: U256,
+    return_amount: U256,
+    commission_amount: U256,
+    spread_amount: U256,
 ) -> StdResult<()> {
     if let Some(expected_return) = expected_return {
         if return_amount.lt(&expected_return) {
