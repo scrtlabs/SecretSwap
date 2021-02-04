@@ -1,9 +1,9 @@
 use std::ops::{Add, Mul, Sub};
 
 use cosmwasm_std::{
-    debug_print, from_binary, log, to_binary, Api, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal,
-    Env, Extern, HandleResponse, HandleResult, HumanAddr, InitResponse, Querier, StdError,
-    StdResult, Storage, Uint128, WasmMsg,
+    from_binary, log, to_binary, Api, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal, Env, Extern,
+    HandleResponse, HandleResult, HumanAddr, InitResponse, Querier, StdError, StdResult, Storage,
+    Uint128, WasmMsg,
 };
 use integer_sqrt::IntegerSquareRoot;
 //use ::{Cw20HandleMsg, Cw20ReceiveMsg, MinterResponse};
@@ -638,46 +638,22 @@ fn compute_swap(
 ) -> StdResult<(Uint128, Uint128, Uint128)> {
     // offer => ask
     // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - commission_rate)
-    debug_print!("cp = offer_pool {} * ask_pool {}", offer_pool, ask_pool);
     let cp = Uint128(offer_pool.u128() * ask_pool.u128());
-    debug_print!("cp = {}", cp);
 
-    debug_print!("return_amount = (ask_pool {} - cp {}.multiply_ratio(1u128, offer_pool {} + offer_amount {}))",ask_pool,cp,offer_pool,offer_amount);
     let return_amount: Uint128 = (ask_pool - cp.multiply_ratio(1u128, offer_pool + offer_amount))?;
-    debug_print!("return_amount = {}", return_amount);
 
     // calculate spread & commission
-    debug_print!("spread_amount = (offer_amount {} * Decimal::from_ratio(ask_pool {}, offer_pool {}) - return_amount {})",offer_amount,ask_pool,offer_pool,return_amount);
     let spread_amount: Uint128 = (offer_amount
         .multiply_ratio(ask_pool, offer_pool)
         .sub(return_amount))
     .unwrap_or_else(|_| Uint128::zero());
-    debug_print!("spread_amount = {}", spread_amount);
-    debug_print!(
-        "commission_amount = (return_amount {}).multiply_ratio(COMMISSION_RATE_NOM {}, COMMISSION_RATE_DENOM {})",
-        return_amount,
-        COMMISSION_RATE_NOM,
-        COMMISSION_RATE_DENOM,
-    );
+
     let commission_amount: Uint128 =
         return_amount.multiply_ratio(COMMISSION_RATE_NOM, COMMISSION_RATE_DENOM);
-    debug_print!("commission_amount = {}", commission_amount);
 
     // commission will be absorbed to pool
-    debug_print!(
-        "return_amount = return_amount {} - commission_amount {}",
-        return_amount,
-        commission_amount
-    );
     let return_amount: Uint128 = return_amount.sub(commission_amount)?;
-    debug_print!("return_amount = {}", return_amount);
 
-    debug_print!(
-        "Ok((return_amount {}, spread_amount {}, commission_amount {}))",
-        return_amount,
-        spread_amount,
-        commission_amount
-    );
     Ok((return_amount, spread_amount, commission_amount))
 }
 
