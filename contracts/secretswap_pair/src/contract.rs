@@ -679,7 +679,9 @@ fn compute_swap(
     let ask_pool = U256::from(ask_pool.u128());
     let offer_amount = U256::from(offer_amount.u128());
 
+    // cp = offer_pool * ask_pool
     // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - commission_rate)
+
     let cp = offer_pool
         .checked_mul(ask_pool)
         .ok_or(StdError::generic_err(format!(
@@ -693,6 +695,7 @@ fn compute_swap(
             "Cannot calculate offer_pool {} + offer_amount {}",
             offer_pool, offer_amount
         )))?;
+    // ask_amount = (ask_pool - cp / new_offer_pool) * (1 - commission_rate)
 
     let cp_div_new_offer_pool =
         cp.checked_div(new_offer_pool)
@@ -700,6 +703,7 @@ fn compute_swap(
                 "Cannot calculate cp {} / new_offer_pool {}",
                 cp, new_offer_pool
             )))?;
+    // ask_amount = (ask_pool - cp_div_new_offer_pool) * (1 - commission_rate)
 
     let return_amount =
         ask_pool
@@ -708,6 +712,7 @@ fn compute_swap(
                 "Cannot calculate ask_pool {} - cp_div_new_offer_pool {}",
                 ask_pool, cp_div_new_offer_pool
             )))?;
+    // ask_amount = return_amount * (1 - commission_rate)
 
     // calculate spread & commission
     // spread = offer_amount * ask_pool / offer_pool - return_amount
@@ -718,6 +723,7 @@ fn compute_swap(
                 "Cannot calculate offer_amount {} * ask_pool {}",
                 offer_amount, ask_pool
             )))?;
+    // spread = offer_amount_mul_ask_pool / offer_pool - return_amount
 
     let offer_amount_mul_ask_pool_div_offer_pool = offer_amount_mul_ask_pool
         .checked_div(offer_pool)
@@ -725,6 +731,7 @@ fn compute_swap(
             "Cannot calculate offer_amount_mul_ask_pool {} / offer_pool {}",
             offer_amount_mul_ask_pool, offer_pool
         )))?;
+    // spread = offer_amount_mul_ask_pool_div_offer_pool - return_amount
 
     let spread_amount = offer_amount_mul_ask_pool_div_offer_pool
         .checked_sub(return_amount)
@@ -740,6 +747,7 @@ fn compute_swap(
             "Cannot calculate return_amount {} * COMMISSION_RATE_NOM {}",
             return_amount, COMMISSION_RATE_NOM
         )))?;
+    // commission_amount = commission_amount_nom / COMMISSION_RATE_DENOM
 
     let commission_amount = commission_amount_nom
         .checked_div(U256::from(COMMISSION_RATE_DENOM))
