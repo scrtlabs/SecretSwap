@@ -1,4 +1,7 @@
-use std::ops::{Add, Mul, Sub};
+use std::{
+    ops::{Add, Mul, Sub},
+    u128,
+};
 
 use cosmwasm_std::{
     debug_print, from_binary, log, to_binary, Api, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal,
@@ -23,8 +26,8 @@ use crate::msg::{
 use crate::state::{read_pair_info, store_pair_info};
 
 /// Commission rate == 0.3%
-const COMMISSION_RATE_NOM: U256 = U256::from(3);
-const COMMISSION_RATE_DENOM: U256 = U256::from(1000);
+const COMMISSION_RATE_NOM: u128 = 3;
+const COMMISSION_RATE_DENOM: u128 = 1000;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -393,7 +396,7 @@ pub fn try_withdraw_liquidity<S: Storage, A: Api, Q: Querier>(
     let pools: [Asset; 2] = pair_info.query_pools(&deps, &env.contract.address)?;
     let total_share: Uint128 = query_supply(&deps, &liquidity_addr, &pair_info.token_code_hash)?;
 
-    let refund_assets: Vec<StdResult<Asset>> = pools
+    let refund_assets: Vec<Asset> = pools
         .iter()
         .map(|a| {
             // new_asset_amount = a.mount * amount / total_share
@@ -417,18 +420,18 @@ pub fn try_withdraw_liquidity<S: Storage, A: Api, Q: Querier>(
                 amount: Uint128(new_asset_amount.low_u128()),
             })
         })
-        .collect();
+        .collect::<StdResult<Vec<Asset>>>()?;
 
     // update pool info
     Ok(HandleResponse {
         messages: vec![
             // refund asset tokens
-            refund_assets[0]?.clone().into_msg(
+            refund_assets[0].clone().into_msg(
                 deps,
                 env.contract.address.clone(),
                 sender.clone(),
             )?,
-            refund_assets[1]?.clone().into_msg(
+            refund_assets[1].clone().into_msg(
                 deps,
                 env.contract.address.clone(),
                 sender.clone(),
@@ -447,7 +450,7 @@ pub fn try_withdraw_liquidity<S: Storage, A: Api, Q: Querier>(
             log("withdrawn_share", &amount.to_string()),
             log(
                 "refund_assets",
-                format!("{}, {}", refund_assets[0], refund_assets[1]),
+                format!("{}, {}", refund_assets[0].clone(), refund_assets[1].clone()),
             ),
         ],
         data: None,
@@ -487,7 +490,7 @@ pub fn try_swap<S: Storage, A: Api, Q: Querier>(
             ))?;
 
         offer_pool = Asset {
-            amount: Uint128(amount.unwrap().low_u128()),
+            amount: Uint128(amount.low_u128()),
             info: pools[0].info.clone(),
         };
         ask_pool = pools[1].clone();
@@ -502,7 +505,7 @@ pub fn try_swap<S: Storage, A: Api, Q: Querier>(
             ))?;
 
         offer_pool = Asset {
-            amount: Uint128(amount.unwrap().low_u128()),
+            amount: Uint128(amount.low_u128()),
             info: pools[1].info.clone(),
         };
         ask_pool = pools[0].clone();
@@ -731,16 +734,15 @@ fn compute_swap(
         )))?;
 
     // commission_amount = return_amount * COMMISSION_RATE_NOM / COMMISSION_RATE_DENOM
-    let commission_amount_nom =
-        return_amount
-            .checked_mul(COMMISSION_RATE_NOM)
-            .ok_or(StdError::generic_err(format!(
-                "Cannot calculate return_amount {} * COMMISSION_RATE_NOM {}",
-                return_amount, COMMISSION_RATE_NOM
-            )))?;
+    let commission_amount_nom = return_amount
+        .checked_mul(U256::from(COMMISSION_RATE_NOM))
+        .ok_or(StdError::generic_err(format!(
+            "Cannot calculate return_amount {} * COMMISSION_RATE_NOM {}",
+            return_amount, COMMISSION_RATE_NOM
+        )))?;
 
     let commission_amount = commission_amount_nom
-        .checked_div(COMMISSION_RATE_DENOM)
+        .checked_div(U256::from(COMMISSION_RATE_DENOM))
         .ok_or(StdError::generic_err(format!(
             "Cannot calculate commission_amount_nom {} / COMMISSION_RATE_DENOM {}",
             commission_amount_nom, COMMISSION_RATE_DENOM
