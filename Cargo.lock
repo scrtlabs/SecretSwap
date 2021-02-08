@@ -222,7 +222,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-std"
 version = "0.10.0"
-source = "git+https://github.com/enigmampc/SecretNetwork?branch=debug-print#ee6f46922013681d0d3e5678f04eb42ffa344bf4"
+source = "git+https://github.com/enigmampc/SecretNetwork?branch=debug-print#23133a6fdbb10742600626152e80876bbfebc2c6"
 dependencies = [
  "base64 0.11.0",
  "schemars",
@@ -234,7 +234,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-storage"
 version = "0.10.0"
-source = "git+https://github.com/enigmampc/SecretNetwork?branch=debug-print#ee6f46922013681d0d3e5678f04eb42ffa344bf4"
+source = "git+https://github.com/enigmampc/SecretNetwork?branch=debug-print#23133a6fdbb10742600626152e80876bbfebc2c6"
 dependencies = [
  "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?branch=debug-print)",
  "serde",
@@ -417,9 +417,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.85"
+version = "0.2.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ccac4b00700875e6a07c6cde370d44d32fa01c5a65cdd2fca6858c479d28bb3"
+checksum = "b7282d924be3275cec7f6756ff4121987bc6481325397dde6ba3e7802b1a8b1c"
 
 [[package]]
 name = "libsecp256k1"
@@ -830,9 +830,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.61"
+version = "1.0.62"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fceb2595057b6891a4ee808f70054bd2d12f0e97f1cbb78689b59f676df325a"
+checksum = "ea1c6153794552ea7cf7cf63b1231a25de00ec90db326ba6264440fa08e31486"
 dependencies = [
  "itoa",
  "ryu",

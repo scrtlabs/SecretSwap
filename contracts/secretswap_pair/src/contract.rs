@@ -8,7 +8,6 @@ use cosmwasm_std::{
     Env, Extern, HandleResponse, HandleResult, HumanAddr, InitResponse, Querier, StdError,
     StdResult, Storage, Uint128, WasmMsg,
 };
-use integer_sqrt::IntegerSquareRoot;
 use primitive_types::U256;
 //use ::{Cw20HandleMsg, Cw20ReceiveMsg, MinterResponse};
 use secret_toolkit::snip20;
@@ -412,6 +411,7 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
 }
 
 /// U256 sqrt ported from here: https://ethereum.stackexchange.com/a/87713/12112
+///
 /// function sqrt(uint y) internal pure returns (uint z) {
 ///     if (y > 3) {
 ///         z = y;
@@ -424,6 +424,8 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
 ///         z = 1;
 ///     }
 /// }
+///
+/// Tested it here: https://github.com/enigmampc/u256-sqrt-test/blob/aa7693/src/main.rs
 fn u256_sqrt(y: U256) -> Option<U256> {
     let mut z = U256::from(0);
     if y.gt(&U256::from(3)) {
