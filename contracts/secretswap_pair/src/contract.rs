@@ -295,14 +295,18 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
     assets: [Asset; 2],
     slippage_tolerance: Option<Decimal>,
 ) -> HandleResult {
+    debug_print("1");
     for asset in assets.iter() {
         asset.assert_sent_native_token_balance(&env)?;
     }
+    debug_print("2");
 
     // Note: pair info + viewing keys are read from storage, therefore the input
     // viewing keys to this function are not used
     let pair_info: PairInfoRaw = read_pair_info(&deps.storage)?;
+    debug_print("3");
     let mut pools: [Asset; 2] = pair_info.query_pools(deps, &env.contract.address)?;
+    debug_print("4");
     let deposits: [Uint128; 2] = [
         assets
             .iter()
@@ -315,6 +319,7 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
             .map(|a| a.amount)
             .expect("Wrong asset info is given"),
     ];
+    debug_print("5");
 
     let mut i = 0;
     let mut messages: Vec<CosmosMsg> = vec![];
@@ -326,6 +331,13 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
             ..
         } = &pool.info
         {
+            debug_print!(
+                "transfer {} from {} to {}",
+                deposits[i],
+                env.message.sender.clone(),
+                env.contract.address.clone()
+            );
+
             messages.push(snip20::transfer_from_msg(
                 env.message.sender.clone(),
                 env.contract.address.clone(),
@@ -351,7 +363,22 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
     let total_share = query_supply(&deps, &liquidity_token, &pair_info.token_code_hash)?;
     let share = if total_share == Uint128::zero() {
         // Initial share = collateral amount
-        Uint128((deposits[0].u128() * deposits[1].u128()).integer_sqrt())
+        let deposit_0 = U256::from(deposits[0].u128());
+        let deposit_1 = U256::from(deposits[1].u128());
+
+        let mul = deposit_0
+            .checked_mul(deposit_1)
+            .ok_or(StdError::generic_err(format!(
+                "Cannot calculate deposit_0 {} * deposit_1 {}",
+                deposit_0, deposit_1
+            )))?;
+
+        let sqrt = u256_sqrt(mul).ok_or(StdError::generic_err(format!(
+            "Cannot calculate sqrt(deposit_0 {} * deposit_1 {})",
+            deposit_0, deposit_1
+        )))?;
+
+        Uint128(sqrt.low_u128())
     } else {
         // min(1, 2)
         // 1. sqrt(deposit_0 * exchange_rate_0_to_1 * deposit_0) * (total_share / sqrt(pool_0 * pool_1))
@@ -382,6 +409,38 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
         ],
         data: None,
     })
+}
+
+/// U256 sqrt ported from here: https://ethereum.stackexchange.com/a/87713/12112
+/// function sqrt(uint y) internal pure returns (uint z) {
+///     if (y > 3) {
+///         z = y;
+///         uint x = y / 2 + 1;
+///         while (x < z) {
+///             z = x;
+///             x = (y / x + x) / 2;
+///         }
+///     } else if (y != 0) {
+///         z = 1;
+///     }
+/// }
+fn u256_sqrt(y: U256) -> Option<U256> {
+    let mut z = U256::from(0);
+    if y.gt(&U256::from(3)) {
+        z = y.clone();
+        let mut x = y.checked_div(U256::from(2))?.checked_add(U256::from(1))?;
+        while x.lt(&z) {
+            z = x.clone();
+            x = y
+                .checked_div(x)?
+                .checked_add(x)?
+                .checked_div(U256::from(2))?;
+        }
+    } else if !y.is_zero() {
+        z = U256::from(1);
+    }
+
+    return Some(z);
 }
 
 pub fn try_withdraw_liquidity<S: Storage, A: Api, Q: Querier>(
