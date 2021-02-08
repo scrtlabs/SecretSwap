@@ -294,18 +294,14 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
     assets: [Asset; 2],
     slippage_tolerance: Option<Decimal>,
 ) -> HandleResult {
-    debug_print("1");
     for asset in assets.iter() {
         asset.assert_sent_native_token_balance(&env)?;
     }
-    debug_print("2");
 
     // Note: pair info + viewing keys are read from storage, therefore the input
     // viewing keys to this function are not used
     let pair_info: PairInfoRaw = read_pair_info(&deps.storage)?;
-    debug_print("3");
     let mut pools: [Asset; 2] = pair_info.query_pools(deps, &env.contract.address)?;
-    debug_print("4");
     let deposits: [Uint128; 2] = [
         assets
             .iter()
@@ -318,7 +314,6 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
             .map(|a| a.amount)
             .expect("Wrong asset info is given"),
     ];
-    debug_print("5");
 
     let mut i = 0;
     let mut messages: Vec<CosmosMsg> = vec![];
@@ -330,13 +325,6 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
             ..
         } = &pool.info
         {
-            debug_print!(
-                "transfer {} from {} to {}",
-                deposits[i],
-                env.message.sender.clone(),
-                env.contract.address.clone()
-            );
-
             messages.push(snip20::transfer_from_msg(
                 env.message.sender.clone(),
                 env.contract.address.clone(),
