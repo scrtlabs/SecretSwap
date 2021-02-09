@@ -19,16 +19,19 @@ export deployer_address=$(secretcli keys show -a $deployer_name)
 echo "Deployer address: '$deployer_address'"
 
 # store factory, pair & lp token contracts
-secretcli tx compute store "${wasm_path}/secretswap_token.wasm" --from "$deployer_name" --gas 2000000 -b block -y
+export TX_HASH=$(secretcli tx compute store "${wasm_path}/secretswap_token.wasm" --from "$deployer_name" --gas 2500000 -y | jq -r .txhash)
+wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
 token_code_id=$(secretcli query compute list-code | jq '.[-1]."id"')
 token_code_hash=$(secretcli query compute list-code | jq '.[-1]."data_hash"')
 echo "Stored token: '$token_code_id', '$token_code_hash'"
 
-secretcli tx compute store "${wasm_path}/secretswap_factory.wasm" --from "$deployer_name" --gas 2000000 -b block -y
+export TX_HASH=$(secretcli tx compute store "${wasm_path}/secretswap_factory.wasm" --from "$deployer_name" --gas 2500000 -y | jq -r .txhash)
+wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
 factory_code_id=$(secretcli query compute list-code | jq '.[-1]."id"')
 echo "Stored factory: '$factory_code_id'"
 
-secretcli tx compute store "${wasm_path}/secretswap_pair.wasm" --from "$deployer_name" --gas 2000000 -b block -y
+export TX_HASH=$(secretcli tx compute store "${wasm_path}/secretswap_pair.wasm" --from "$deployer_name" --gas 2500000 -y | jq -r .txhash)
+wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
 pair_code_id=$(secretcli query compute list-code | jq '.[-1]."id"')
 pair_code_hash=$(secretcli query compute list-code | jq '.[-1]."data_hash"')
 echo "Stored pair: '$pair_code_id', '$pair_code_hash'"
@@ -48,7 +51,7 @@ echo "Factory address: '$factory_contract'"
 
 # create sscrt/seth pair
 export TX_HASH=$(
-  secretcli tx compute execute --label $label '{"create_pair": {"asset_infos": [{"token": {"contract_addr": '$sscrt_addr', "token_code_hash": '$sscrt_hash', "viewing_key": ""}},{"token": {"contract_addr": '$seth_addr', "token_code_hash": '$seth_hash', "viewing_key": ""}}]}}' --from $deployer_name -y --gas 1500000 -b block | jq -r .txhash
+  secretcli tx compute execute --label $label '{"create_pair": {"asset_infos": [{"token": {"contract_addr": '$sscrt_addr', "token_code_hash": '$sscrt_hash', "viewing_key": ""}},{"token": {"contract_addr": '$seth_addr', "token_code_hash": '$seth_hash', "viewing_key": ""}}]}}' --from $deployer_name -y --gas 1500000 | jq -r .txhash
 )
 wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
 secretcli q compute tx $TX_HASH
@@ -57,10 +60,16 @@ pair_contract=$(secretcli query compute list-contract-by-code $pair_code_id | jq
 echo "Pair contract address: '$pair_contract'"
 
 # provide 1000 seth / 100 sscrt
-secretcli tx compute execute $(echo "$seth_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract', "amount": "1000000000000000000000"}}' -b block -y --from $deployer_name
-secretcli tx compute execute $(echo "$sscrt_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract', "amount": "100000000"}}' -b block -y --from $deployer_name
+export TX_HASH=$(secretcli tx compute execute $(echo "$seth_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract', "amount": "1000000000000000000000"}}' -y --from $deployer_name | jq -r .txhash)
+wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
+secretcli q compute tx $TX_HASH
+
+export TX_HASH=$(secretcli tx compute execute $(echo "$sscrt_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract', "amount": "100000000"}}' -y --from $deployer_name | jq -r .txhash)
+wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
+secretcli q compute tx $TX_HASH
+
 export TX_HASH=$( 
-  secretcli tx compute execute $(echo "$pair_contract" | tr -d '"') '{"provide_liquidity": {"assets": [{"info": {"token": {"contract_addr": '$sscrt_addr', "token_code_hash": '$sscrt_hash', "viewing_key": ""}}, "amount": "100000000"}, {"info": {"token": {"contract_addr": '$seth_addr', "token_code_hash": '$seth_hash', "viewing_key": ""}}, "amount": "1000000000000000000000"}]}}' --amount 100000000uscrt --from $deployer_name -y --gas 1500000 -b block | jq -r .txhash
+  secretcli tx compute execute $(echo "$pair_contract" | tr -d '"') '{"provide_liquidity": {"assets": [{"info": {"token": {"contract_addr": '$sscrt_addr', "token_code_hash": '$sscrt_hash', "viewing_key": ""}}, "amount": "100000000"}, {"info": {"token": {"contract_addr": '$seth_addr', "token_code_hash": '$seth_hash', "viewing_key": ""}}, "amount": "1000000000000000000000"}]}}' --amount 100000000uscrt --from $deployer_name -y --gas 1500000 | jq -r .txhash
 )
 wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
 secretcli q compute tx $TX_HASH
