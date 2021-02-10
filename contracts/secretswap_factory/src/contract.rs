@@ -4,7 +4,10 @@ use cosmwasm_std::{
 };
 use secret_toolkit::crypto::{sha_256, Prng};
 
-use secretswap::{AssetInfo, Factory, InitHook, PairInfo, PairInfoRaw, PairInitMsg};
+use secretswap::{
+    AssetInfo, CallableContract, Factory, Fee, InitHook, PairInfo, PairInfoRaw, PairInitMsg,
+    PairSettings,
+};
 
 use crate::msg::{
     ConfigResponse, HandleMsg, InitMsg, PairsResponse, PairsSettingsResponse, QueryMsg,
@@ -12,7 +15,7 @@ use crate::msg::{
 use crate::querier::query_liquidity_token;
 use crate::state::{
     read_config, read_pair, read_pair_settings, read_pairs, store_config, store_pair,
-    store_pair_settings, CallableContract, Config, DevFund, Fee, PairSettings,
+    store_pair_settings, Config,
 };
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
@@ -38,7 +41,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             commission_rate_nom: Uint128(3),
             commission_rate_denom: Uint128(1000),
         },
-        dev_fund: None,
         swap_data_endpoint: None,
     };
 
@@ -88,9 +90,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::Register { asset_infos } => try_register(deps, env, asset_infos),
         HandleMsg::UpdatePairSettings {
             swap_fee,
-            dev_fund,
             swap_data_endpoint,
-        } => try_update_pair_settings(deps, env, swap_fee, dev_fund, swap_data_endpoint),
+        } => try_update_pair_settings(deps, env, swap_fee, swap_data_endpoint),
     }
 }
 
@@ -251,7 +252,6 @@ pub fn try_update_pair_settings<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     swap_fee: Option<Fee>,
-    dev_fund: Option<DevFund>,
     swap_data_endpoint: Option<CallableContract>,
 ) -> HandleResult {
     let config: Config = read_config(&deps.storage)?;
@@ -266,7 +266,6 @@ pub fn try_update_pair_settings<S: Storage, A: Api, Q: Querier>(
         pair_settings.swap_fee = swap_fee;
     }
 
-    pair_settings.dev_fund = dev_fund;
     pair_settings.swap_data_endpoint = swap_data_endpoint;
 
     store_pair_settings(&mut deps.storage, &pair_settings)?;

@@ -2,8 +2,7 @@ use cosmwasm_std::{Binary, HumanAddr};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::state::{CallableContract, DevFund, Fee, PairSettings};
-use secretswap::{AssetInfo, InitHook, PairInfo};
+use secretswap::{AssetInfo, CallableContract, Fee, InitHook, PairInfo, PairSettings};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
@@ -30,7 +29,6 @@ pub enum HandleMsg {
     /// UpdatePairSettings
     UpdatePairSettings {
         swap_fee: Option<Fee>,
-        dev_fund: Option<DevFund>,
         swap_data_endpoint: Option<CallableContract>,
     },
     /// CreatePair instantiates pair contract
