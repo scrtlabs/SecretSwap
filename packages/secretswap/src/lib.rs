@@ -1,4 +1,4 @@
-pub use crate::asset::{Asset, AssetInfo, AssetInfoRaw, AssetRaw, PairInfo, PairInfoRaw};
+pub use crate::asset::{Asset, AssetInfo, AssetInfoRaw, AssetRaw, Factory, PairInfo, PairInfoRaw};
 pub use crate::hook::InitHook;
 pub use crate::init::{Balance, PairInitMsg, TokenInitMsg};
 pub use crate::msg::{

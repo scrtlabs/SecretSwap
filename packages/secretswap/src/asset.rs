@@ -271,6 +271,12 @@ impl AssetRaw {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct Factory {
+    pub address: HumanAddr,
+    pub code_hash: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub enum AssetInfoRaw {
     Token {
         contract_addr: CanonicalAddr,
@@ -339,6 +345,7 @@ pub struct PairInfo {
     pub contract_addr: HumanAddr,
     pub liquidity_token: HumanAddr,
     pub token_code_hash: String,
+    pub factory: Factory,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -347,6 +354,7 @@ pub struct PairInfoRaw {
     pub contract_addr: CanonicalAddr,
     pub liquidity_token: CanonicalAddr,
     pub token_code_hash: String,
+    pub factory: Factory,
 }
 
 impl PairInfoRaw {
@@ -362,6 +370,7 @@ impl PairInfoRaw {
                 self.asset_infos[1].to_normal(&deps)?,
             ],
             token_code_hash: self.token_code_hash.clone(),
+            factory: self.factory.clone(),
         })
     }
 

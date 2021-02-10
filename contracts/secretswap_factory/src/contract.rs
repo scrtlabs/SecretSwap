@@ -4,7 +4,7 @@ use cosmwasm_std::{
 };
 use secret_toolkit::crypto::{sha_256, Prng};
 
-use secretswap::{AssetInfo, InitHook, PairInfo, PairInfoRaw, PairInitMsg};
+use secretswap::{AssetInfo, Factory, InitHook, PairInfo, PairInfoRaw, PairInitMsg};
 
 use crate::msg::{ConfigResponse, HandleMsg, InitMsg, PairsResponse, QueryMsg};
 use crate::querier::query_liquidity_token;
@@ -140,6 +140,10 @@ pub fn try_create_pair<S: Storage, A: Api, Q: Querier>(
             contract_addr: CanonicalAddr::default(),
             asset_infos: raw_infos,
             token_code_hash: config.pair_code_hash.clone(),
+            factory: Factory {
+                address: env.contract.address.clone(),
+                code_hash: env.contract_code_hash.clone(),
+            },
         },
     )?;
 

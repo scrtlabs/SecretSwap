@@ -602,6 +602,15 @@ dependencies = [
 [[package]]
 name = "secret-toolkit"
 version = "0.1.0"
+source = "git+https://github.com/enigmampc/secret-toolkit?rev=6aa670f#6aa670f680c4e6e5960beefe3221315cfd56f066"
+dependencies = [
+ "secret-toolkit-serialization 0.1.0 (git+https://github.com/enigmampc/secret-toolkit?rev=6aa670f)",
+ "secret-toolkit-storage 0.1.0 (git+https://github.com/enigmampc/secret-toolkit?rev=6aa670f)",
+]
+
+[[package]]
+name = "secret-toolkit"
+version = "0.1.0"
 source = "git+https://github.com/enigmampc/secret-toolkit#1faf60a45ece9b4dc7c635786259f731405b4f76"
 dependencies = [
  "secret-toolkit-crypto",
@@ -609,15 +618,6 @@ dependencies = [
  "secret-toolkit-snip20",
  "secret-toolkit-storage 0.1.0 (git+https://github.com/enigmampc/secret-toolkit)",
  "secret-toolkit-utils",
-]
-
-[[package]]
-name = "secret-toolkit"
-version = "0.1.0"
-source = "git+https://github.com/enigmampc/secret-toolkit?rev=6aa670f#6aa670f680c4e6e5960beefe3221315cfd56f066"
-dependencies = [
- "secret-toolkit-serialization 0.1.0 (git+https://github.com/enigmampc/secret-toolkit?rev=6aa670f)",
- "secret-toolkit-storage 0.1.0 (git+https://github.com/enigmampc/secret-toolkit?rev=6aa670f)",
 ]
 
 [[package]]
@@ -635,7 +635,7 @@ dependencies = [
 [[package]]
 name = "secret-toolkit-serialization"
 version = "0.1.0"
-source = "git+https://github.com/enigmampc/secret-toolkit#1faf60a45ece9b4dc7c635786259f731405b4f76"
+source = "git+https://github.com/enigmampc/secret-toolkit?rev=6aa670f#6aa670f680c4e6e5960beefe3221315cfd56f066"
 dependencies = [
  "bincode2",
  "cosmwasm-std",
@@ -645,7 +645,7 @@ dependencies = [
 [[package]]
 name = "secret-toolkit-serialization"
 version = "0.1.0"
-source = "git+https://github.com/enigmampc/secret-toolkit?rev=6aa670f#6aa670f680c4e6e5960beefe3221315cfd56f066"
+source = "git+https://github.com/enigmampc/secret-toolkit#1faf60a45ece9b4dc7c635786259f731405b4f76"
 dependencies = [
  "bincode2",
  "cosmwasm-std",
@@ -666,22 +666,22 @@ dependencies = [
 [[package]]
 name = "secret-toolkit-storage"
 version = "0.1.0"
-source = "git+https://github.com/enigmampc/secret-toolkit#1faf60a45ece9b4dc7c635786259f731405b4f76"
+source = "git+https://github.com/enigmampc/secret-toolkit?rev=6aa670f#6aa670f680c4e6e5960beefe3221315cfd56f066"
 dependencies = [
  "cosmwasm-std",
  "cosmwasm-storage",
- "secret-toolkit-serialization 0.1.0 (git+https://github.com/enigmampc/secret-toolkit)",
+ "secret-toolkit-serialization 0.1.0 (git+https://github.com/enigmampc/secret-toolkit?rev=6aa670f)",
  "serde",
 ]
 
 [[package]]
 name = "secret-toolkit-storage"
 version = "0.1.0"
-source = "git+https://github.com/enigmampc/secret-toolkit?rev=6aa670f#6aa670f680c4e6e5960beefe3221315cfd56f066"
+source = "git+https://github.com/enigmampc/secret-toolkit#1faf60a45ece9b4dc7c635786259f731405b4f76"
 dependencies = [
  "cosmwasm-std",
  "cosmwasm-storage",
- "secret-toolkit-serialization 0.1.0 (git+https://github.com/enigmampc/secret-toolkit?rev=6aa670f)",
+ "secret-toolkit-serialization 0.1.0 (git+https://github.com/enigmampc/secret-toolkit)",
  "serde",
 ]
 

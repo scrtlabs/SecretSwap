@@ -10,8 +10,8 @@ use integer_sqrt::IntegerSquareRoot;
 use secret_toolkit::snip20;
 
 use secretswap::{
-    query_supply, Asset, AssetInfo, AssetInfoRaw, InitHook, PairInfo, PairInfoRaw, PairInitMsg,
-    TokenInitMsg,
+    query_supply, Asset, AssetInfo, AssetInfoRaw, Factory, InitHook, PairInfo, PairInfoRaw,
+    PairInitMsg, TokenInitMsg,
 };
 
 use crate::math::{decimal_multiplication, decimal_subtraction, reverse_decimal};
@@ -94,16 +94,33 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         _ => {}
     }
 
-    let pair_info: &PairInfoRaw = &PairInfoRaw {
-        contract_addr: deps.api.canonical_address(&env.contract.address)?,
-        liquidity_token: CanonicalAddr::default(),
-        asset_infos: [asset0, asset1],
-        token_code_hash: msg.token_code_hash.clone(),
-    };
+    if let Some(hook) = msg.init_hook {
+        messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: hook.contract_addr.clone(),
+            callback_code_hash: hook.code_hash.clone(),
+            msg: hook.msg,
+            send: vec![],
+        }));
 
-    // create viewing keys
+        let pair_info: &PairInfoRaw = &PairInfoRaw {
+            contract_addr: deps.api.canonical_address(&env.contract.address)?,
+            liquidity_token: CanonicalAddr::default(),
+            asset_infos: [asset0, asset1],
+            token_code_hash: msg.token_code_hash.clone(),
+            factory: Factory {
+                address: hook.contract_addr,
+                code_hash: hook.code_hash,
+            },
+        };
 
-    store_pair_info(&mut deps.storage, &pair_info)?;
+        // create viewing keys
+
+        store_pair_info(&mut deps.storage, &pair_info)?;
+    } else {
+        return Err(StdError::generic_err(
+            "Must provide the factory as init hook",
+        ));
+    }
 
     // Create LP token
     messages.extend(vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
@@ -124,15 +141,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         label: format!("{}-{}-token", &msg.asset_infos[0], &msg.asset_infos[1]),
         callback_code_hash: msg.token_code_hash,
     })]);
-
-    if let Some(hook) = msg.init_hook {
-        messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: hook.contract_addr,
-            callback_code_hash: hook.code_hash,
-            msg: hook.msg,
-            send: vec![],
-        }));
-    }
 
     Ok(InitResponse {
         messages,
