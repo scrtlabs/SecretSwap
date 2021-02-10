@@ -103,7 +103,7 @@ pub fn try_register<S: Storage, A: Api, Q: Querier>(
 
     Ok(HandleResponse {
         messages: vec![message],
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         data: None,
     })
 }
@@ -166,7 +166,7 @@ fn try_redeem<S: Storage, A: Api, Q: Querier>(
 
     Ok(HandleResponse {
         messages: vec![secret_redeem, redeem],
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         data: None,
     })
 }

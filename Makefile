@@ -50,9 +50,16 @@ _compile:
 .PHONY: compile-optimized _compile-optimized
 compile-optimized: _compile-optimized
 _compile-optimized:
-	RUSTFLAGS='-C link-arg=-s' cargo build --release --target wasm32-unknown-unknown --locked
+	RUSTFLAGS='-C link-arg=-s' cargo +nightly build --release --target wasm32-unknown-unknown --locked
 	@# The following line is not necessary, may work only on linux (extra size optimization)
 	# wasm-opt -Os ./target/wasm32-unknown-unknown/release/*.wasm -o .
+	cp ./target/wasm32-unknown-unknown/release/*.wasm ./build/
+
+.PHONY: compile-w-debug-print _compile-w-debug-print
+compile-w-debug-print: _compile-w-debug-print
+_compile-w-debug-print:
+	RUSTFLAGS='-C link-arg=-s' cargo +nightly build --release --target wasm32-unknown-unknown --locked
+	cd contracts/secretswap_pair && RUSTFLAGS='-C link-arg=-s' cargo build --release --features debug-print --target wasm32-unknown-unknown --locked
 	cp ./target/wasm32-unknown-unknown/release/*.wasm ./build/
 
 .PHONY: compile-optimized-reproducible

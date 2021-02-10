@@ -17,11 +17,11 @@ default = []
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.0" }
-cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.0" }
+cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", branch = "debug-print" }
+cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", branch = "debug-print" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
-secret-toolkit = { git = "https://github.com/enigmampc/secret-toolkit" }
+secret-toolkit = { git = "https://github.com/enigmampc/secret-toolkit", branch = "debug-print" }
 # secretswap-token = { path= "../../contracts/secretswap_token"}
 #[dev-dependencies]
 #cosmwasm-vm = { version = "0.10.1", default-features = false }

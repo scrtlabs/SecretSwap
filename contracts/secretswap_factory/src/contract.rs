@@ -58,7 +58,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     Ok(InitResponse {
         messages,
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
     })
 }
 
@@ -136,7 +136,7 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
 
     Ok(HandleResponse {
         messages: vec![],
-        log: vec![],
+        log: vec![log("status", "success")], // See https://github.com/CosmWasm/wasmd/pull/386
         data: None,
     })
 }
@@ -162,6 +162,8 @@ pub fn try_create_pair<S: Storage, A: Api, Q: Querier>(
             contract_addr: CanonicalAddr::default(),
             asset_infos: raw_infos,
             token_code_hash: config.pair_code_hash.clone(),
+            asset0_volume: Uint128(0),
+            asset1_volume: Uint128(0),
             factory: Factory {
                 address: env.contract.address.clone(),
                 code_hash: env.contract_code_hash.clone(),
@@ -175,7 +177,13 @@ pub fn try_create_pair<S: Storage, A: Api, Q: Querier>(
     let mut messages: Vec<CosmosMsg> = vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
         code_id: config.pair_code_id,
         send: vec![],
-        label: format!("{}-{}-pair", asset_infos[0], asset_infos[1]),
+        label: format!(
+            "{}-{}-pair-{}-{}",
+            asset_infos[0],
+            asset_infos[1],
+            env.contract.address.clone(),
+            config.pair_code_id
+        ),
         msg: to_binary(&PairInitMsg {
             asset_infos: asset_infos.clone(),
             token_code_id: config.token_code_id,

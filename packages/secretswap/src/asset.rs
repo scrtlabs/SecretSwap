@@ -345,6 +345,8 @@ pub struct PairInfo {
     pub contract_addr: HumanAddr,
     pub liquidity_token: HumanAddr,
     pub token_code_hash: String,
+    pub asset0_volume: Uint128,
+    pub asset1_volume: Uint128,
     pub factory: Factory,
 }
 
@@ -354,6 +356,8 @@ pub struct PairInfoRaw {
     pub contract_addr: CanonicalAddr,
     pub liquidity_token: CanonicalAddr,
     pub token_code_hash: String,
+    pub asset0_volume: Uint128,
+    pub asset1_volume: Uint128,
     pub factory: Factory,
 }
 
@@ -370,6 +374,8 @@ impl PairInfoRaw {
                 self.asset_infos[1].to_normal(&deps)?,
             ],
             token_code_hash: self.token_code_hash.clone(),
+            asset0_volume: self.asset0_volume.clone(),
+            asset1_volume: self.asset1_volume.clone(),
             factory: self.factory.clone(),
         })
     }
