@@ -665,15 +665,6 @@ dependencies = [
 [[package]]
 name = "secret-toolkit"
 version = "0.1.0"
-source = "git+https://github.com/enigmampc/secret-toolkit?rev=6aa670f#6aa670f680c4e6e5960beefe3221315cfd56f066"
-dependencies = [
- "secret-toolkit-serialization 0.1.0 (git+https://github.com/enigmampc/secret-toolkit?rev=6aa670f)",
- "secret-toolkit-storage 0.1.0 (git+https://github.com/enigmampc/secret-toolkit?rev=6aa670f)",
-]
-
-[[package]]
-name = "secret-toolkit"
-version = "0.1.0"
 source = "git+https://github.com/enigmampc/secret-toolkit?branch=debug-print#1f18251705213b1de0517889de9ab0fdfeffc85b"
 dependencies = [
  "secret-toolkit-crypto",

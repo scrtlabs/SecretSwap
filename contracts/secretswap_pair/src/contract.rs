@@ -22,11 +22,8 @@ use crate::msg::{
     Cw20HookMsg, HandleMsg, PoolResponse, QueryMsg, ReverseSimulationResponse, SimulationResponse,
 };
 
+use crate::querier::query_pair_settings;
 use crate::state::{read_pair_info, store_pair_info};
-
-/// Commission rate == 0.3%
-const COMMISSION_RATE_NOM: u128 = 3;
-const COMMISSION_RATE_DENOM: u128 = 1000;
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -578,9 +575,20 @@ pub fn try_swap<S: Storage, A: Api, Q: Querier>(
 
     store_pair_info(&mut deps.storage, &pair_info)?;
 
+    let pair_settings = query_pair_settings(
+        &deps,
+        &pair_info.factory.address,
+        &pair_info.factory.code_hash,
+    )?;
+
     let offer_amount = offer_asset.amount;
-    let (return_amount, spread_amount, commission_amount) =
-        compute_swap(offer_pool.amount, ask_pool.amount, offer_amount)?;
+    let (return_amount, spread_amount, commission_amount) = compute_swap(
+        offer_pool.amount,
+        ask_pool.amount,
+        offer_amount,
+        pair_settings.swap_fee.commission_rate_nom.0,
+        pair_settings.swap_fee.commission_rate_denom.0,
+    )?;
 
     // check max spread limit if exist
     assert_max_spread(
@@ -683,8 +691,19 @@ pub fn query_simulation<S: Storage, A: Api, Q: Querier>(
         ));
     }
 
-    let (return_amount, spread_amount, commission_amount) =
-        compute_swap(offer_pool.amount, ask_pool.amount, offer_asset.amount)?;
+    let pair_settings = query_pair_settings(
+        &deps,
+        &pair_info.factory.address,
+        &pair_info.factory.code_hash,
+    )?;
+
+    let (return_amount, spread_amount, commission_amount) = compute_swap(
+        offer_pool.amount,
+        ask_pool.amount,
+        offer_asset.amount,
+        pair_settings.swap_fee.commission_rate_nom.0,
+        pair_settings.swap_fee.commission_rate_denom.0,
+    )?;
 
     Ok(SimulationResponse {
         return_amount,
@@ -716,8 +735,19 @@ pub fn query_reverse_simulation<S: Storage, A: Api, Q: Querier>(
         ));
     }
 
-    let (offer_amount, spread_amount, commission_amount) =
-        compute_offer_amount(offer_pool.amount, ask_pool.amount, ask_asset.amount)?;
+    let pair_settings = query_pair_settings(
+        &deps,
+        &pair_info.factory.address,
+        &pair_info.factory.code_hash,
+    )?;
+
+    let (offer_amount, spread_amount, commission_amount) = compute_offer_amount(
+        offer_pool.amount,
+        ask_pool.amount,
+        ask_asset.amount,
+        pair_settings.swap_fee.commission_rate_nom.0,
+        pair_settings.swap_fee.commission_rate_denom.0,
+    )?;
 
     Ok(ReverseSimulationResponse {
         offer_amount,
@@ -737,6 +767,8 @@ fn compute_swap(
     offer_pool: Uint128,
     ask_pool: Uint128,
     offer_amount: Uint128,
+    commission_rate_nom: u128,
+    commission_rate_denom: u128,
 ) -> StdResult<(Uint128, Uint128, Uint128)> {
     // offer => ask
     let offer_pool = U256::from(offer_pool.u128());
@@ -806,18 +838,18 @@ fn compute_swap(
 
     // commission_amount = return_amount * COMMISSION_RATE_NOM / COMMISSION_RATE_DENOM
     let commission_amount_nom = return_amount
-        .checked_mul(U256::from(COMMISSION_RATE_NOM))
+        .checked_mul(U256::from(commission_rate_nom))
         .ok_or(StdError::generic_err(format!(
             "Cannot calculate return_amount {} * COMMISSION_RATE_NOM {}",
-            return_amount, COMMISSION_RATE_NOM
+            return_amount, commission_rate_nom
         )))?;
     // commission_amount = commission_amount_nom / COMMISSION_RATE_DENOM
 
     let commission_amount = commission_amount_nom
-        .checked_div(U256::from(COMMISSION_RATE_DENOM))
+        .checked_div(U256::from(commission_rate_denom))
         .ok_or(StdError::generic_err(format!(
             "Cannot calculate commission_amount_nom {} / COMMISSION_RATE_DENOM {}",
-            commission_amount_nom, COMMISSION_RATE_DENOM
+            commission_amount_nom, commission_rate_denom
         )))?;
 
     // commission will be absorbed to pool
@@ -840,13 +872,15 @@ fn compute_offer_amount(
     offer_pool: Uint128,
     ask_pool: Uint128,
     ask_amount: Uint128,
+    commission_rate_nom: u128,
+    commission_rate_denom: u128,
 ) -> StdResult<(Uint128, Uint128, Uint128)> {
     // ask => offer
     // offer_amount = cp / (ask_pool - ask_amount / (1 - commission_rate)) - offer_pool
     let cp = Uint128(offer_pool.u128() * ask_pool.u128());
     let one_minus_commission = decimal_subtraction(
         Decimal::one(),
-        Decimal::from_ratio(COMMISSION_RATE_NOM, COMMISSION_RATE_DENOM),
+        Decimal::from_ratio(commission_rate_nom, commission_rate_denom),
     )?;
 
     let offer_amount: Uint128 = (cp.multiply_ratio(
@@ -859,7 +893,7 @@ fn compute_offer_amount(
         - before_commission_deduction)
         .unwrap_or_else(|_| Uint128::zero());
     let commission_amount = before_commission_deduction
-        * Decimal::from_ratio(COMMISSION_RATE_NOM, COMMISSION_RATE_DENOM);
+        * Decimal::from_ratio(commission_rate_nom, commission_rate_denom);
     Ok((offer_amount, spread_amount, commission_amount))
 }
 
