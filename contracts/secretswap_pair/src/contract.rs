@@ -103,9 +103,9 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         liquidity_token: CanonicalAddr::default(),
         token_code_hash: msg.token_code_hash.clone(),
         asset_infos: [asset0, asset1],
+        asset0_volume: Uint128(0),
+        asset1_volume: Uint128(0),
     };
-
-    // create viewing keys
 
     store_pair_info(&mut deps.storage, &pair_info)?;
 
@@ -519,7 +519,7 @@ pub fn try_swap<S: Storage, A: Api, Q: Querier>(
 ) -> HandleResult {
     offer_asset.assert_sent_native_token_balance(&env)?;
 
-    let pair_info: PairInfoRaw = read_pair_info(&deps.storage)?;
+    let mut pair_info: PairInfoRaw = read_pair_info(&deps.storage)?;
 
     let pools: [Asset; 2] = pair_info.query_pools(&deps, &env.contract.address)?;
 
@@ -543,6 +543,8 @@ pub fn try_swap<S: Storage, A: Api, Q: Querier>(
             info: pools[0].info.clone(),
         };
         ask_pool = pools[1].clone();
+
+        pair_info.asset0_volume = pair_info.asset0_volume.add(offer_asset.amount);
     } else if offer_asset.info.equal(&pools[1].info) {
         let pool_amount = U256::from(pools[1].amount.u128());
         let offer_amount = U256::from(offer_asset.amount.u128());
@@ -558,9 +560,13 @@ pub fn try_swap<S: Storage, A: Api, Q: Querier>(
             info: pools[1].info.clone(),
         };
         ask_pool = pools[0].clone();
+
+        pair_info.asset1_volume = pair_info.asset1_volume.add(offer_asset.amount);
     } else {
         return Err(StdError::generic_err("Wrong asset info is given"));
     }
+
+    store_pair_info(&mut deps.storage, &pair_info)?;
 
     let offer_amount = offer_asset.amount;
     let (return_amount, spread_amount, commission_amount) =
@@ -577,7 +583,6 @@ pub fn try_swap<S: Storage, A: Api, Q: Querier>(
         spread_amount,
     )?;
 
-    // compute tax
     let return_asset = Asset {
         info: ask_pool.info.clone(),
         amount: return_amount,

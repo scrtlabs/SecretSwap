@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     log, to_binary, Api, Binary, CanonicalAddr, CosmosMsg, Env, Extern, HandleResponse,
-    HandleResult, HumanAddr, InitResponse, Querier, StdError, StdResult, Storage, WasmMsg,
+    HandleResult, HumanAddr, InitResponse, Querier, StdError, StdResult, Storage, Uint128, WasmMsg,
 };
 use secret_toolkit::crypto::{sha_256, Prng};
 
@@ -140,6 +140,8 @@ pub fn try_create_pair<S: Storage, A: Api, Q: Querier>(
             contract_addr: CanonicalAddr::default(),
             asset_infos: raw_infos,
             token_code_hash: config.pair_code_hash.clone(),
+            asset0_volume: Uint128(0),
+            asset1_volume: Uint128(0),
         },
     )?;
 
