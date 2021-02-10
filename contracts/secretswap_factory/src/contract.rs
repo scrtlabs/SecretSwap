@@ -1,14 +1,19 @@
 use cosmwasm_std::{
     log, to_binary, Api, Binary, CanonicalAddr, CosmosMsg, Env, Extern, HandleResponse,
-    HandleResult, HumanAddr, InitResponse, Querier, StdError, StdResult, Storage, WasmMsg,
+    HandleResult, HumanAddr, InitResponse, Querier, StdError, StdResult, Storage, Uint128, WasmMsg,
 };
 use secret_toolkit::crypto::{sha_256, Prng};
 
 use secretswap::{AssetInfo, Factory, InitHook, PairInfo, PairInfoRaw, PairInitMsg};
 
-use crate::msg::{ConfigResponse, HandleMsg, InitMsg, PairsResponse, QueryMsg};
+use crate::msg::{
+    ConfigResponse, HandleMsg, InitMsg, PairsResponse, PairsSettingsResponse, QueryMsg,
+};
 use crate::querier::query_liquidity_token;
-use crate::state::{read_config, read_pair, read_pairs, store_config, store_pair, Config};
+use crate::state::{
+    read_config, read_pair, read_pair_settings, read_pairs, store_config, store_pair,
+    store_pair_settings, CallableContract, Config, DevFund, Fee, PairSettings,
+};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -27,6 +32,17 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     };
 
     store_config(&mut deps.storage, &config)?;
+
+    let pair_settings = PairSettings {
+        swap_fee: Fee {
+            commission_rate_nom: Uint128(3),
+            commission_rate_denom: Uint128(1000),
+        },
+        dev_fund: None,
+        swap_data_endpoint: None,
+    };
+
+    store_pair_settings(&mut deps.storage, &pair_settings)?;
 
     let mut messages: Vec<CosmosMsg> = vec![];
     if let Some(hook) = msg.init_hook {
@@ -70,6 +86,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             init_hook,
         } => try_create_pair(deps, env, asset_infos, init_hook),
         HandleMsg::Register { asset_infos } => try_register(deps, env, asset_infos),
+        HandleMsg::UpdatePairSettings {
+            swap_fee,
+            dev_fund,
+            swap_data_endpoint,
+        } => try_update_pair_settings(deps, env, swap_fee, dev_fund, swap_data_endpoint),
     }
 }
 
@@ -225,6 +246,38 @@ pub fn try_register<S: Storage, A: Api, Q: Querier>(
     })
 }
 
+// Only owner can execute it
+pub fn try_update_pair_settings<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+    swap_fee: Option<Fee>,
+    dev_fund: Option<DevFund>,
+    swap_data_endpoint: Option<CallableContract>,
+) -> HandleResult {
+    let config: Config = read_config(&deps.storage)?;
+    let mut pair_settings = read_pair_settings(&deps.storage)?;
+
+    // permission check
+    if deps.api.canonical_address(&env.message.sender)? != config.owner {
+        return Err(StdError::unauthorized());
+    }
+
+    if let Some(swap_fee) = swap_fee {
+        pair_settings.swap_fee = swap_fee;
+    }
+
+    pair_settings.dev_fund = dev_fund;
+    pair_settings.swap_data_endpoint = swap_data_endpoint;
+
+    store_pair_settings(&mut deps.storage, &pair_settings)?;
+
+    Ok(HandleResponse {
+        messages: vec![],
+        log: vec![],
+        data: None,
+    })
+}
+
 pub fn query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     msg: QueryMsg,
@@ -235,6 +288,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::Pairs { start_after, limit } => {
             to_binary(&query_pairs(deps, start_after, limit)?)
         }
+        QueryMsg::PairSettings {} => to_binary(&query_pair_settings(deps)?),
     }
 }
 
@@ -275,4 +329,12 @@ pub fn query_pairs<S: Storage, A: Api, Q: Querier>(
     let resp = PairsResponse { pairs };
 
     Ok(resp)
+}
+
+pub fn query_pair_settings<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+) -> StdResult<PairsSettingsResponse> {
+    let pair_settings = read_pair_settings(&deps.storage)?;
+
+    Ok(PairsSettingsResponse { pair_settings })
 }

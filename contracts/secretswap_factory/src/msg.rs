@@ -2,6 +2,7 @@ use cosmwasm_std::{Binary, HumanAddr};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::state::{CallableContract, DevFund, Fee, PairSettings};
 use secretswap::{AssetInfo, InitHook, PairInfo};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -26,6 +27,12 @@ pub enum HandleMsg {
         pair_code_hash: Option<String>,
         token_code_hash: Option<String>,
     },
+    /// UpdatePairSettings
+    UpdatePairSettings {
+        swap_fee: Option<Fee>,
+        dev_fund: Option<DevFund>,
+        swap_data_endpoint: Option<CallableContract>,
+    },
     /// CreatePair instantiates pair contract
     CreatePair {
         /// Asset infos
@@ -41,6 +48,7 @@ pub enum HandleMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
+    PairSettings {},
     Pair {
         asset_infos: [AssetInfo; 2],
     },
@@ -62,4 +70,10 @@ pub struct ConfigResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct PairsResponse {
     pub pairs: Vec<PairInfo>,
+}
+
+// We define a custom struct for each query response
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct PairsSettingsResponse {
+    pub pair_settings: PairSettings,
 }
