@@ -1,5 +1,5 @@
 use crate::Asset;
-use cosmwasm_std::{to_binary, CosmosMsg, HumanAddr, Uint128, WasmMsg};
+use cosmwasm_std::{to_binary, CosmosMsg, HumanAddr, StdResult, Uint128, WasmMsg};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -20,8 +20,13 @@ pub struct PairSettings {
 }
 
 impl SwapDataEndpoint {
-    pub fn into_msg(self, asset_in: Asset, asset_out: Asset, account: HumanAddr) -> CosmosMsg {
-        CosmosMsg::Wasm(WasmMsg::Execute {
+    pub fn into_msg(
+        self,
+        asset_in: Asset,
+        asset_out: Asset,
+        account: HumanAddr,
+    ) -> StdResult<CosmosMsg> {
+        Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.address,
             callback_code_hash: self.code_hash,
             msg: to_binary(&SwapDataEndpointMsg::ReceiveSwapData {
@@ -30,10 +35,12 @@ impl SwapDataEndpoint {
                 account,
             })?,
             send: vec![],
-        })
+        }))
     }
 }
 
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
 pub enum SwapDataEndpointMsg {
     ReceiveSwapData {
         asset_in: Asset,
