@@ -312,10 +312,8 @@ pub fn query_pairs<S: Storage, A: Api, Q: Querier>(
 
 pub fn query_pair_settings<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
-) -> StdResult<PairsSettingsResponse> {
+) -> StdResult<PairSettings> {
     let config = read_config(&deps.storage)?;
 
-    Ok(PairsSettingsResponse {
-        pair_settings: config.pair_settings,
-    })
+    Ok(config.pair_settings)
 }
