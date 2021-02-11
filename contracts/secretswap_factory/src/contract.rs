@@ -13,10 +13,7 @@ use crate::msg::{
     ConfigResponse, HandleMsg, InitMsg, PairsResponse, PairsSettingsResponse, QueryMsg,
 };
 use crate::querier::query_liquidity_token;
-use crate::state::{
-    read_config, read_pair, read_pair_settings, read_pairs, store_config, store_pair,
-    store_pair_settings, Config,
-};
+use crate::state::{read_config, read_pair, read_pairs, store_config, store_pair, Config};
 
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -32,19 +29,16 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         token_code_hash: msg.token_code_hash.clone(),
         pair_code_hash: msg.pair_code_hash.clone(),
         prng_seed: prng_seed_hashed.to_vec(),
+        pair_settings: PairSettings {
+            swap_fee: Fee {
+                commission_rate_nom: Uint128(3),
+                commission_rate_denom: Uint128(1000),
+            },
+            swap_data_endpoint: None,
+        },
     };
 
     store_config(&mut deps.storage, &config)?;
-
-    let pair_settings = PairSettings {
-        swap_fee: Fee {
-            commission_rate_nom: Uint128(3),
-            commission_rate_denom: Uint128(1000),
-        },
-        swap_data_endpoint: None,
-    };
-
-    store_pair_settings(&mut deps.storage, &pair_settings)?;
 
     let mut messages: Vec<CosmosMsg> = vec![];
     if let Some(hook) = msg.init_hook {
@@ -74,6 +68,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             pair_code_id,
             pair_code_hash,
             token_code_hash,
+            swap_fee,
+            swap_data_endpoint,
         } => try_update_config(
             deps,
             env,
@@ -82,16 +78,14 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             pair_code_id,
             pair_code_hash,
             token_code_hash,
+            swap_fee,
+            swap_data_endpoint,
         ),
         HandleMsg::CreatePair {
             asset_infos,
             init_hook,
         } => try_create_pair(deps, env, asset_infos, init_hook),
         HandleMsg::Register { asset_infos } => try_register(deps, env, asset_infos),
-        HandleMsg::UpdatePairSettings {
-            swap_fee,
-            swap_data_endpoint,
-        } => try_update_pair_settings(deps, env, swap_fee, swap_data_endpoint),
     }
 }
 
@@ -104,6 +98,8 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     pair_code_id: Option<u64>,
     pair_code_hash: Option<String>,
     token_code_hash: Option<String>,
+    swap_fee: Option<Fee>,
+    swap_data_endpoint: Option<SwapDataEndpoint>,
 ) -> HandleResult {
     let mut config: Config = read_config(&deps.storage)?;
 
@@ -131,6 +127,12 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     if let Some(pair_code_hash) = pair_code_hash {
         config.token_code_hash = pair_code_hash;
     }
+
+    if let Some(swap_fee) = swap_fee {
+        config.pair_settings.swap_fee = swap_fee;
+    }
+
+    config.pair_settings.swap_data_endpoint = swap_data_endpoint;
 
     store_config(&mut deps.storage, &config)?;
 
@@ -255,36 +257,6 @@ pub fn try_register<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-// Only owner can execute it
-pub fn try_update_pair_settings<S: Storage, A: Api, Q: Querier>(
-    deps: &mut Extern<S, A, Q>,
-    env: Env,
-    swap_fee: Option<Fee>,
-    swap_data_endpoint: Option<SwapDataEndpoint>,
-) -> HandleResult {
-    let config: Config = read_config(&deps.storage)?;
-    let mut pair_settings = read_pair_settings(&deps.storage)?;
-
-    // permission check
-    if deps.api.canonical_address(&env.message.sender)? != config.owner {
-        return Err(StdError::unauthorized());
-    }
-
-    if let Some(swap_fee) = swap_fee {
-        pair_settings.swap_fee = swap_fee;
-    }
-
-    pair_settings.swap_data_endpoint = swap_data_endpoint;
-
-    store_pair_settings(&mut deps.storage, &pair_settings)?;
-
-    Ok(HandleResponse {
-        messages: vec![],
-        log: vec![],
-        data: None,
-    })
-}
-
 pub fn query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
     msg: QueryMsg,
@@ -341,7 +313,9 @@ pub fn query_pairs<S: Storage, A: Api, Q: Querier>(
 pub fn query_pair_settings<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
 ) -> StdResult<PairsSettingsResponse> {
-    let pair_settings = read_pair_settings(&deps.storage)?;
+    let config = read_config(&deps.storage)?;
 
-    Ok(PairsSettingsResponse { pair_settings })
+    Ok(PairsSettingsResponse {
+        pair_settings: config.pair_settings,
+    })
 }

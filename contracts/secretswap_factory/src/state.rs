@@ -4,7 +4,6 @@ use schemars::JsonSchema;
 use secretswap::{AssetInfoRaw, PairInfo, PairInfoRaw, PairSettings};
 use serde::{Deserialize, Serialize};
 static KEY_CONFIG: &[u8] = b"config";
-static KEY_PAIR_SETTINGS: &[u8] = b"pair_settings";
 static PAIR_TRACKER: &[u8] = b"pair_tracker";
 static PREFIX_PAIR_INFO: &[u8] = b"pair_info";
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -15,6 +14,7 @@ pub struct Config {
     pub token_code_hash: String,
     pub pair_code_hash: String,
     pub prng_seed: Vec<u8>,
+    pub pair_settings: PairSettings,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default, JsonSchema)]
 pub struct PairTracker(pub Vec<Vec<u8>>);
@@ -29,12 +29,6 @@ pub fn store_config<S: Storage>(storage: &mut S, data: &Config) -> StdResult<()>
 }
 pub fn read_config<S: Storage>(storage: &S) -> StdResult<Config> {
     ReadonlySingleton::new(storage, KEY_CONFIG).load()
-}
-pub fn store_pair_settings<S: Storage>(storage: &mut S, data: &PairSettings) -> StdResult<()> {
-    Singleton::new(storage, KEY_PAIR_SETTINGS).save(data)
-}
-pub fn read_pair_settings<S: Storage>(storage: &S) -> StdResult<PairSettings> {
-    ReadonlySingleton::new(storage, KEY_PAIR_SETTINGS).load()
 }
 pub fn store_pair<S: Storage>(storage: &mut S, data: &PairInfoRaw) -> StdResult<()> {
     let mut asset_infos = data.asset_infos.clone().to_vec();

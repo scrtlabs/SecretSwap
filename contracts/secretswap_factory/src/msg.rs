@@ -25,9 +25,6 @@ pub enum HandleMsg {
         pair_code_id: Option<u64>,
         pair_code_hash: Option<String>,
         token_code_hash: Option<String>,
-    },
-    /// UpdatePairSettings
-    UpdatePairSettings {
         swap_fee: Option<Fee>,
         swap_data_endpoint: Option<SwapDataEndpoint>,
     },
