@@ -353,17 +353,13 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
         let deposit_0 = U256::from(deposits[0].u128());
         let deposit_1 = U256::from(deposits[1].u128());
 
-        let mul = deposit_0
+        let sqrt = deposit_0
             .checked_mul(deposit_1)
+            .and_then(|mul| u256_sqrt(mul))
             .ok_or(StdError::generic_err(format!(
-                "Cannot calculate deposit_0 {} * deposit_1 {}",
+                "Cannot calculate sqrt(deposit_0 {} * deposit_1 {})",
                 deposit_0, deposit_1
             )))?;
-
-        let sqrt = u256_sqrt(mul).ok_or(StdError::generic_err(format!(
-            "Cannot calculate sqrt(deposit_0 {} * deposit_1 {})",
-            deposit_0, deposit_1
-        )))?;
 
         Uint128(sqrt.low_u128())
     } else {
@@ -372,10 +368,38 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
         // == deposit_0 * total_share / pool_0
         // 2. sqrt(deposit_1 * exchange_rate_1_to_0 * deposit_1) * (total_share / sqrt(pool_1 * pool_1))
         // == deposit_1 * total_share / pool_1
-        std::cmp::min(
-            deposits[0].multiply_ratio(total_share, pools[0].amount),
-            deposits[1].multiply_ratio(total_share, pools[1].amount),
-        )
+
+        // This was:
+        // std::cmp::min(
+        //   deposits[0].multiply_ratio(total_share, pools[0].amount),
+        //   deposits[1].multiply_ratio(total_share, pools[1].amount),
+        // )
+
+        let total_share = U256::from(total_share.u128());
+
+        let deposit0 = U256::from(deposits[0].u128());
+        let pools0_amount = U256::from(pools[0].amount.u128());
+
+        let share0 = deposit0
+            .checked_mul(total_share)
+            .and_then(|res| res.checked_div(pools0_amount))
+            .ok_or(StdError::generic_err(format!(
+                "Cannot calculate deposits[0] {} * total_share {} / pools[0].amount {}",
+                deposit0, total_share, pools0_amount
+            )))?;
+
+        let deposit1 = U256::from(deposits[1].u128());
+        let pools1_amount = U256::from(pools[1].amount.u128());
+
+        let share1 = deposit1
+            .checked_mul(total_share)
+            .and_then(|res| res.checked_div(pools1_amount))
+            .ok_or(StdError::generic_err(format!(
+                "Cannot calculate deposits[1] {} * total_share {} / pools[1].amount {}",
+                deposit1, total_share, pools1_amount
+            )))?;
+
+        Uint128(std::cmp::min(share0, share1).low_u128())
     };
 
     messages.push(snip20::mint_msg(
@@ -448,20 +472,14 @@ pub fn try_withdraw_liquidity<S: Storage, A: Api, Q: Querier>(
     let refund_assets: Vec<Asset> = pools
         .iter()
         .map(|a| {
-            // new_asset_amount = a.mount * amount / total_share
+            // new_asset_amount = a.amount * amount / total_share
 
-            let asset_amount_mul_amount = U256::from(a.amount.u128())
+            let new_asset_amount = U256::from(a.amount.u128())
                 .checked_mul(U256::from(amount.u128()))
+                .and_then(|res| res.checked_div(U256::from(total_share.u128())))
                 .ok_or(StdError::generic_err(format!(
-                    "Cannot calculate a.amount {} * amount {}",
-                    a.amount, amount
-                )))?;
-
-            let new_asset_amount = asset_amount_mul_amount
-                .checked_div(U256::from(total_share.u128()))
-                .ok_or(StdError::generic_err(format!(
-                    "Cannot calculate asset_amount_mul_amount {} / total_share {}",
-                    asset_amount_mul_amount, total_share
+                    "Cannot calculate a.amount {} * amount {} / total_share {}",
+                    a.amount, amount, total_share
                 )))?;
 
             Ok(Asset {
