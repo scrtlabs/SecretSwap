@@ -606,14 +606,28 @@ pub fn try_swap<S: Storage, A: Api, Q: Querier>(
         amount: return_amount,
     };
 
+    let mut messages = Vec::<CosmosMsg>::new();
+    messages.push(return_asset.into_msg(
+        &deps,
+        env.contract.address.clone(),
+        to.unwrap_or(sender),
+    )?);
+
+    if let Some(data_endpoint) = pair_settings.swap_data_endpoint {
+        messages.push(data_endpoint.into_msg(
+            offer_asset,
+            Asset {
+                info: return_asset.info,
+                amount: return_amount + commission_amount,
+            },
+            to.unwrap_or(sender.clone()),
+        ));
+    }
+
     // 1. send collateral token from the contract to a user
     // 2. send inactive commission to collector
     Ok(HandleResponse {
-        messages: vec![return_asset.into_msg(
-            &deps,
-            env.contract.address.clone(),
-            to.unwrap_or(sender),
-        )?],
+        messages,
         log: vec![
             log("action", "swap"),
             log("offer_asset", offer_asset.info.to_string()),

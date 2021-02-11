@@ -5,8 +5,8 @@ use cosmwasm_std::{
 use secret_toolkit::crypto::{sha_256, Prng};
 
 use secretswap::{
-    AssetInfo, CallableContract, Factory, Fee, InitHook, PairInfo, PairInfoRaw, PairInitMsg,
-    PairSettings,
+    AssetInfo, Factory, Fee, InitHook, PairInfo, PairInfoRaw, PairInitMsg, PairSettings,
+    SwapDataEndpoint,
 };
 
 use crate::msg::{
@@ -260,7 +260,7 @@ pub fn try_update_pair_settings<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     swap_fee: Option<Fee>,
-    swap_data_endpoint: Option<CallableContract>,
+    swap_data_endpoint: Option<SwapDataEndpoint>,
 ) -> HandleResult {
     let config: Config = read_config(&deps.storage)?;
     let mut pair_settings = read_pair_settings(&deps.storage)?;
