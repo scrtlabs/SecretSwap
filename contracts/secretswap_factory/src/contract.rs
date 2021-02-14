@@ -9,9 +9,7 @@ use secretswap::{
     SwapDataEndpoint,
 };
 
-use crate::msg::{
-    ConfigResponse, HandleMsg, InitMsg, PairsResponse, PairsSettingsResponse, QueryMsg,
-};
+use crate::msg::{ConfigResponse, HandleMsg, InitMsg, PairsResponse, QueryMsg};
 use crate::querier::query_liquidity_token;
 use crate::state::{read_config, read_pair, read_pairs, store_config, store_pair, Config};
 

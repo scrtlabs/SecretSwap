@@ -298,6 +298,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
+name = "dummy-swap-data-receiver"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?branch=debug-print)",
+ "cosmwasm-storage",
+ "schemars",
+ "secret-toolkit",
+ "secretswap",
+ "serde",
+ "snafu",
+]
+
+[[package]]
 name = "enclave-ffi-types"
 version = "0.1.0"
 source = "git+https://github.com/enigmampc/SecretNetwork?tag=v1.0.0#490fba9243e6cb291462e9d3c1bcbd1975c0df1e"

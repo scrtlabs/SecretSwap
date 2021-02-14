@@ -66,9 +66,3 @@ pub struct ConfigResponse {
 pub struct PairsResponse {
     pub pairs: Vec<PairInfo>,
 }
-
-// We define a custom struct for each query response
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct PairsSettingsResponse {
-    pub pair_settings: PairSettings,
-}
