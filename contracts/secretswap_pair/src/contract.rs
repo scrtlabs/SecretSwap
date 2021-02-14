@@ -95,36 +95,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         _ => {}
     }
 
-    if let Some(hook) = msg.init_hook {
-        messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: hook.contract_addr.clone(),
-            callback_code_hash: hook.code_hash.clone(),
-            msg: hook.msg,
-            send: vec![],
-        }));
-
-        let pair_info: &PairInfoRaw = &PairInfoRaw {
-            contract_addr: deps.api.canonical_address(&env.contract.address)?,
-            liquidity_token: CanonicalAddr::default(),
-            token_code_hash: msg.token_code_hash.clone(),
-            asset_infos: [asset0, asset1],
-            asset0_volume: Uint128(0),
-            asset1_volume: Uint128(0),
-            factory: Factory {
-                address: hook.contract_addr,
-                code_hash: hook.code_hash,
-            },
-        };
-
-        // create viewing keys
-
-        store_pair_info(&mut deps.storage, &pair_info)?;
-    } else {
-        return Err(StdError::generic_err(
-            "Must provide the factory as init hook",
-        ));
-    }
-
     // Create LP token
     messages.extend(vec![CosmosMsg::Wasm(WasmMsg::Instantiate {
         code_id: msg.token_code_id,
@@ -150,8 +120,38 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             &msg.asset_infos[1],
             &env.contract.address.clone()
         ),
-        callback_code_hash: msg.token_code_hash,
+        callback_code_hash: msg.token_code_hash.clone(),
     })]);
+
+    if let Some(hook) = msg.init_hook {
+        messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: hook.contract_addr.clone(),
+            callback_code_hash: hook.code_hash.clone(),
+            msg: hook.msg,
+            send: vec![],
+        }));
+
+        let pair_info: &PairInfoRaw = &PairInfoRaw {
+            contract_addr: deps.api.canonical_address(&env.contract.address)?,
+            liquidity_token: CanonicalAddr::default(),
+            token_code_hash: msg.token_code_hash,
+            asset_infos: [asset0, asset1],
+            asset0_volume: Uint128(0),
+            asset1_volume: Uint128(0),
+            factory: Factory {
+                address: hook.contract_addr,
+                code_hash: hook.code_hash,
+            },
+        };
+
+        // create viewing keys
+
+        store_pair_info(&mut deps.storage, &pair_info)?;
+    } else {
+        return Err(StdError::generic_err(
+            "Must provide the factory as init hook",
+        ));
+    }
 
     Ok(InitResponse {
         messages,
