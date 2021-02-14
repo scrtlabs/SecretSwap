@@ -1,7 +1,7 @@
 use cosmwasm_std::{Api, CanonicalAddr, Extern, Querier, StdError, StdResult, Storage};
 use cosmwasm_storage::{Bucket, ReadonlyBucket, ReadonlySingleton, Singleton};
 use schemars::JsonSchema;
-use secretswap::{AssetInfoRaw, PairInfo, PairInfoRaw};
+use secretswap::{AssetInfoRaw, PairInfo, PairInfoRaw, PairSettings};
 use serde::{Deserialize, Serialize};
 static KEY_CONFIG: &[u8] = b"config";
 static PAIR_TRACKER: &[u8] = b"pair_tracker";
@@ -14,6 +14,7 @@ pub struct Config {
     pub token_code_hash: String,
     pub pair_code_hash: String,
     pub prng_seed: Vec<u8>,
+    pub pair_settings: PairSettings,
 }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default, JsonSchema)]
 pub struct PairTracker(pub Vec<Vec<u8>>);

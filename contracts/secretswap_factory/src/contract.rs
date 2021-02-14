@@ -4,7 +4,10 @@ use cosmwasm_std::{
 };
 use secret_toolkit::crypto::{sha_256, Prng};
 
-use secretswap::{AssetInfo, InitHook, PairInfo, PairInfoRaw, PairInitMsg};
+use secretswap::{
+    AssetInfo, Factory, Fee, InitHook, PairInfo, PairInfoRaw, PairInitMsg, PairSettings,
+    SwapDataEndpoint,
+};
 
 use crate::msg::{ConfigResponse, HandleMsg, InitMsg, PairsResponse, QueryMsg};
 use crate::querier::query_liquidity_token;
@@ -24,6 +27,13 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         token_code_hash: msg.token_code_hash.clone(),
         pair_code_hash: msg.pair_code_hash.clone(),
         prng_seed: prng_seed_hashed.to_vec(),
+        pair_settings: PairSettings {
+            swap_fee: Fee {
+                commission_rate_nom: Uint128(3),
+                commission_rate_denom: Uint128(1000),
+            },
+            swap_data_endpoint: None,
+        },
     };
 
     store_config(&mut deps.storage, &config)?;
@@ -56,6 +66,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             pair_code_id,
             pair_code_hash,
             token_code_hash,
+            swap_fee,
+            swap_data_endpoint,
         } => try_update_config(
             deps,
             env,
@@ -64,6 +76,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             pair_code_id,
             pair_code_hash,
             token_code_hash,
+            swap_fee,
+            swap_data_endpoint,
         ),
         HandleMsg::CreatePair {
             asset_infos,
@@ -82,6 +96,8 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     pair_code_id: Option<u64>,
     pair_code_hash: Option<String>,
     token_code_hash: Option<String>,
+    swap_fee: Option<Fee>,
+    swap_data_endpoint: Option<SwapDataEndpoint>,
 ) -> HandleResult {
     let mut config: Config = read_config(&deps.storage)?;
 
@@ -109,6 +125,12 @@ pub fn try_update_config<S: Storage, A: Api, Q: Querier>(
     if let Some(pair_code_hash) = pair_code_hash {
         config.token_code_hash = pair_code_hash;
     }
+
+    if let Some(swap_fee) = swap_fee {
+        config.pair_settings.swap_fee = swap_fee;
+    }
+
+    config.pair_settings.swap_data_endpoint = swap_data_endpoint;
 
     store_config(&mut deps.storage, &config)?;
 
@@ -142,6 +164,10 @@ pub fn try_create_pair<S: Storage, A: Api, Q: Querier>(
             token_code_hash: config.pair_code_hash.clone(),
             asset0_volume: Uint128(0),
             asset1_volume: Uint128(0),
+            factory: Factory {
+                address: env.contract.address.clone(),
+                code_hash: env.contract_code_hash.clone(),
+            },
         },
     )?;
 
@@ -239,6 +265,7 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::Pairs { start_after, limit } => {
             to_binary(&query_pairs(deps, start_after, limit)?)
         }
+        QueryMsg::PairSettings {} => to_binary(&query_pair_settings(deps)?),
     }
 }
 
@@ -279,4 +306,12 @@ pub fn query_pairs<S: Storage, A: Api, Q: Querier>(
     let resp = PairsResponse { pairs };
 
     Ok(resp)
+}
+
+pub fn query_pair_settings<S: Storage, A: Api, Q: Querier>(
+    deps: &Extern<S, A, Q>,
+) -> StdResult<PairSettings> {
+    let config = read_config(&deps.storage)?;
+
+    Ok(config.pair_settings)
 }
