@@ -222,7 +222,7 @@ dependencies = [
 [[package]]
 name = "cosmwasm-std"
 version = "0.10.0"
-source = "git+https://github.com/enigmampc/SecretNetwork?branch=debug-print#23133a6fdbb10742600626152e80876bbfebc2c6"
+source = "git+https://github.com/enigmampc/SecretNetwork?rev=004c6bc#004c6bca6f2b7f31a6594abe4f44f2e41b1456b3"
 dependencies = [
  "base64 0.11.0",
  "schemars",
@@ -234,9 +234,9 @@ dependencies = [
 [[package]]
 name = "cosmwasm-storage"
 version = "0.10.0"
-source = "git+https://github.com/enigmampc/SecretNetwork?branch=debug-print#23133a6fdbb10742600626152e80876bbfebc2c6"
+source = "git+https://github.com/enigmampc/SecretNetwork?rev=004c6bc#004c6bca6f2b7f31a6594abe4f44f2e41b1456b3"
 dependencies = [
- "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?branch=debug-print)",
+ "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?rev=004c6bc)",
  "serde",
 ]
 
@@ -539,9 +539,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.8"
+version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "991431c3519a3f36861882da93630ce66b52918dcf1b8e2fd66b397fc96f28df"
+checksum = "c3d0b9745dc2debf507c8422de05d7226cc1f0644216dfdfead988f9b1ab32a7"
 dependencies = [
  "proc-macro2",
 ]
@@ -565,7 +565,7 @@ checksum = "0ef9e7e66b4468674bfcb0c81af8b7fa0bb154fa9f28eb840da5c447baeb8d7e"
 dependencies = [
  "libc",
  "rand_chacha 0.3.0",
- "rand_core 0.6.1",
+ "rand_core 0.6.2",
  "rand_hc 0.3.0",
 ]
 
@@ -586,7 +586,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e12735cf05c9e10bf21534da50a147b924d555dc7a547c42e6bb2d5b6017ae0d"
 dependencies = [
  "ppv-lite86",
- "rand_core 0.6.1",
+ "rand_core 0.6.2",
 ]
 
 [[package]]
@@ -597,9 +597,9 @@ checksum = "90bde5296fc891b0cef12a6d03ddccc162ce7b2aff54160af9338f8d40df6d19"
 
 [[package]]
 name = "rand_core"
-version = "0.6.1"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c026d7df8b298d90ccbbc5190bd04d85e159eaf5576caeacf8741da93ccbd2e5"
+checksum = "34cf66eb183df1c5876e2dcf6b13d57340741e8dc255b48e40a26de954d06ae7"
 dependencies = [
  "getrandom",
 ]
@@ -619,7 +619,7 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3190ef7066a446f2e7f42e239d161e905420ccab01eb967c9eb27d21b2322a73"
 dependencies = [
- "rand_core 0.6.1",
+ "rand_core 0.6.2",
 ]
 
 [[package]]
@@ -678,7 +678,7 @@ dependencies = [
 [[package]]
 name = "secret-toolkit"
 version = "0.1.0"
-source = "git+https://github.com/enigmampc/secret-toolkit?branch=debug-print#1f18251705213b1de0517889de9ab0fdfeffc85b"
+source = "git+https://github.com/enigmampc/secret-toolkit?branch=debug-print#e960c64971d5f3cfe33114b3d80b0b0aa46cf963"
 dependencies = [
  "secret-toolkit-crypto",
  "secret-toolkit-serialization",
@@ -690,9 +690,9 @@ dependencies = [
 [[package]]
 name = "secret-toolkit-crypto"
 version = "0.1.0"
-source = "git+https://github.com/enigmampc/secret-toolkit?branch=debug-print#1f18251705213b1de0517889de9ab0fdfeffc85b"
+source = "git+https://github.com/enigmampc/secret-toolkit?branch=debug-print#e960c64971d5f3cfe33114b3d80b0b0aa46cf963"
 dependencies = [
- "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?branch=debug-print)",
+ "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?rev=004c6bc)",
  "libsecp256k1",
  "rand_chacha 0.2.2",
  "rand_core 0.5.1",
@@ -702,19 +702,19 @@ dependencies = [
 [[package]]
 name = "secret-toolkit-serialization"
 version = "0.1.0"
-source = "git+https://github.com/enigmampc/secret-toolkit?branch=debug-print#1f18251705213b1de0517889de9ab0fdfeffc85b"
+source = "git+https://github.com/enigmampc/secret-toolkit?branch=debug-print#e960c64971d5f3cfe33114b3d80b0b0aa46cf963"
 dependencies = [
  "bincode2",
- "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?branch=debug-print)",
+ "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?rev=004c6bc)",
  "serde",
 ]
 
 [[package]]
 name = "secret-toolkit-snip20"
 version = "0.1.0"
-source = "git+https://github.com/enigmampc/secret-toolkit?branch=debug-print#1f18251705213b1de0517889de9ab0fdfeffc85b"
+source = "git+https://github.com/enigmampc/secret-toolkit?branch=debug-print#e960c64971d5f3cfe33114b3d80b0b0aa46cf963"
 dependencies = [
- "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?branch=debug-print)",
+ "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?rev=004c6bc)",
  "schemars",
  "secret-toolkit-utils",
  "serde",
@@ -723,9 +723,9 @@ dependencies = [
 [[package]]
 name = "secret-toolkit-storage"
 version = "0.1.0"
-source = "git+https://github.com/enigmampc/secret-toolkit?branch=debug-print#1f18251705213b1de0517889de9ab0fdfeffc85b"
+source = "git+https://github.com/enigmampc/secret-toolkit?branch=debug-print#e960c64971d5f3cfe33114b3d80b0b0aa46cf963"
 dependencies = [
- "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?branch=debug-print)",
+ "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?rev=004c6bc)",
  "cosmwasm-storage",
  "secret-toolkit-serialization",
  "serde",
@@ -734,9 +734,9 @@ dependencies = [
 [[package]]
 name = "secret-toolkit-utils"
 version = "0.1.0"
-source = "git+https://github.com/enigmampc/secret-toolkit?branch=debug-print#1f18251705213b1de0517889de9ab0fdfeffc85b"
+source = "git+https://github.com/enigmampc/secret-toolkit?branch=debug-print#e960c64971d5f3cfe33114b3d80b0b0aa46cf963"
 dependencies = [
- "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?branch=debug-print)",
+ "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?rev=004c6bc)",
  "schemars",
  "serde",
 ]
@@ -745,7 +745,7 @@ dependencies = [
 name = "secretswap"
 version = "0.1.0"
 dependencies = [
- "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?branch=debug-print)",
+ "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?rev=004c6bc)",
  "cosmwasm-storage",
  "schemars",
  "secret-toolkit",
@@ -756,7 +756,7 @@ dependencies = [
 name = "secretswap-factory"
 version = "0.1.0"
 dependencies = [
- "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?branch=debug-print)",
+ "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?rev=004c6bc)",
  "cosmwasm-storage",
  "schemars",
  "secret-toolkit",
@@ -769,7 +769,7 @@ name = "secretswap-pair"
 version = "0.1.0"
 dependencies = [
  "base64 0.13.0",
- "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?branch=debug-print)",
+ "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?rev=004c6bc)",
  "cosmwasm-storage",
  "integer-sqrt",
  "primitive-types",
@@ -787,7 +787,7 @@ dependencies = [
  "bincode2",
  "cosmwasm-schema",
  "cosmwasm-sgx-vm",
- "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?branch=debug-print)",
+ "cosmwasm-std 0.10.0 (git+https://github.com/enigmampc/SecretNetwork?rev=004c6bc)",
  "cosmwasm-storage",
  "hex",
  "rand_chacha 0.2.2",

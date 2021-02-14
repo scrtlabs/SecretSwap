@@ -20,8 +20,8 @@ default = []
 backtraces = ["cosmwasm-std/backtraces"]
 
 [dependencies]
-cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", branch = "debug-print" }
-cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", branch = "debug-print" }
+cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", rev = "004c6bc" }
+cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", rev = "004c6bc" }
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }
