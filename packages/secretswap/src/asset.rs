@@ -85,10 +85,11 @@ impl Asset {
 
                 callback_code_hash: token_code_hash.clone(),
 
-                msg: to_binary(&HandleMsg::Transfer {
+                msg: to_binary(&HandleMsg::Send {
                     recipient,
                     amount,
                     padding: None,
+                    msg: None,
                 })?,
                 send: vec![],
             })),
