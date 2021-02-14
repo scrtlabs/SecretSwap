@@ -2,7 +2,7 @@ use cosmwasm_std::{Binary, HumanAddr};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use secretswap::{AssetInfo, Fee, InitHook, PairInfo, PairSettings, SwapDataEndpoint};
+use secretswap::{AssetInfo, Fee, InitHook, PairInfo, SwapDataEndpoint};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {

@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     debug_print, to_binary, Api, Binary, Env, Extern, HandleResponse, HandleResult, HumanAddr,
-    InitResponse, Querier, StdError, StdResult, Storage,
+    InitResponse, Querier, StdResult, Storage,
 };
 
 use crate::msg::{CountResponse, InitMsg, QueryMsg, SwapDataEndpointMsg};
@@ -24,7 +24,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
-    env: Env,
+    _env: Env,
     msg: SwapDataEndpointMsg,
 ) -> StdResult<HandleResponse> {
     match msg {

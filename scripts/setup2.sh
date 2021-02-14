@@ -113,9 +113,9 @@ secretcli tx compute execute $(echo "$pair_contract_eth_dai" | tr -d '"') '{"pro
 
 secretcli tx compute execute $(echo "$factory_contract" | tr -d '"') '{"update_config": {"swap_data_endpoint": {"address":'$dummy_contract', "code_hash":'$dummy_code_hash'}}}' -b block -y --from $deployer_name
 
-secretcli tx send a secret1p6lyvpalxr769x4hu6fg34up2uwytzp5yylhad 100000000uscrt -y -b block
-secretcli tx compute execute $(echo "$eth_addr" | tr -d '"') '{"transfer":{"recipient":"secret1p6lyvpalxr769x4hu6fg34up2uwytzp5yylhad","amount":"1000000000000000000000"}}' --from a -y -b block
-secretcli tx compute execute $(echo "$dai_addr" | tr -d '"') '{"transfer":{"recipient":"secret1p6lyvpalxr769x4hu6fg34up2uwytzp5yylhad","amount":"1000000000000000000000"}}' --from a -y -b block
+secretcli tx send a secret1x6my6xxxkladvsupcka7k092m50rdw8pk8dpq9 100000000uscrt -y -b block
+secretcli tx compute execute $(echo "$eth_addr" | tr -d '"') '{"transfer":{"recipient":"secret1x6my6xxxkladvsupcka7k092m50rdw8pk8dpq9","amount":"1000000000000000000000"}}' --from a -y -b block
+secretcli tx compute execute $(echo "$dai_addr" | tr -d '"') '{"transfer":{"recipient":"secret1x6my6xxxkladvsupcka7k092m50rdw8pk8dpq9","amount":"1000000000000000000000"}}' --from a -y -b block
 
 echo Factory: "$factory_contract" | tr -d '"'
 echo Dummy: "$dummy_contract" | tr -d '"'
