@@ -43,7 +43,7 @@ echo "Stored dummy: '$dummy_code_id', '$dummy_code_hash'"
 
 
 # init dummy cashback contract
-label=dummy
+label="dummy-${RANDOM}"
 export TX_HASH=$(
   secretcli tx compute instantiate $dummy_code_id '{}' --label $label --from $deployer_name -y |
   jq -r .txhash
