@@ -23,7 +23,6 @@ backtraces = ["cosmwasm-std/backtraces"]
 debug-print = ["cosmwasm-std/debug-print"]
 
 [dependencies]
-integer-sqrt = "0.1.5"
 secretswap = { path = "../../packages/secretswap", default-features = false, version = "0.1.0" }
 secret-toolkit = { git = "https://github.com/enigmampc/secret-toolkit", branch = "debug-print" }
 cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", rev = "004c6bc" }
