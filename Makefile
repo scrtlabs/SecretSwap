@@ -60,6 +60,7 @@ compile-w-debug-print: _compile-w-debug-print
 _compile-w-debug-print:
 	RUSTFLAGS='-C link-arg=-s' cargo +nightly build --release --target wasm32-unknown-unknown --locked
 	cd contracts/secretswap_pair && RUSTFLAGS='-C link-arg=-s' cargo build --release --features debug-print --target wasm32-unknown-unknown --locked
+	cd contracts/dummy_swap_data_receiver && RUSTFLAGS='-C link-arg=-s' cargo build --release --features debug-print --target wasm32-unknown-unknown --locked
 	cp ./target/wasm32-unknown-unknown/release/*.wasm ./build/
 
 .PHONY: compile-optimized-reproducible
@@ -89,7 +90,7 @@ schema:
 clean:
 	cargo clean
 	rm -f ./contract.wasm ./contract.wasm.gz
-	$(MAKE) -C tests/example-receiver clean
+	#$(MAKE) -C tests/example-receiver clean
 
 
 # token: 1
