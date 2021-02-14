@@ -36,6 +36,23 @@ pair_code_id=$(secretcli query compute list-code | jq '.[-1]."id"')
 pair_code_hash=$(secretcli query compute list-code | jq '.[-1]."data_hash"')
 echo "Stored pair: '$pair_code_id', '$pair_code_hash'"
 
+secretcli tx compute store "${wasm_path}/dummy_swap_data_receiver.wasm" --from "$deployer_name" --gas 3000000 -b block -y
+dummy_code_id=$(secretcli query compute list-code | jq '.[-1]."id"')
+dummy_code_hash=$(secretcli query compute list-code | jq '.[-1]."data_hash"')
+echo "Stored dummy: '$dummy_code_id', '$dummy_code_hash'"
+
+
+# init dummy cashback contract
+label=dummy
+export TX_HASH=$(
+  secretcli tx compute instantiate $dummy_code_id '{}' --label $label --from $deployer_name -y |
+  jq -r .txhash
+)
+wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
+secretcli q compute tx $TX_HASH
+
+dummy_contract=$(secretcli query compute list-contract-by-code $dummy_code_id | jq '.[-1].address')
+echo "Dummy address: '$dummy_contract'"
 
 # init factory
 label="amm-${RANDOM}"
@@ -74,4 +91,8 @@ export TX_HASH=$(
 wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
 secretcli q compute tx $TX_HASH
 
+# update factory with the dummy contract as a swap data endpoint
+secretcli tx compute execute $(echo "$factory_contract" | tr -d '"') '{"update_config": {"swap_data_endpoint": {"address":'$dummy_contract', "code_hash":'$dummy_code_hash'}}}' -b block -y --from $deployer_name
+
 echo Factory: "$factory_contract" | tr -d '"'
+echo Dummy: "$dummy_contract" | tr -d '"'

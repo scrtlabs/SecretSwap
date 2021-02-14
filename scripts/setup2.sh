@@ -35,6 +35,11 @@ pair_code_id=$(secretcli query compute list-code | jq '.[-1]."id"')
 pair_code_hash=$(secretcli query compute list-code | jq '.[-1]."data_hash"')
 echo "Stored pair: '$pair_code_id', '$pair_code_hash'"
 
+secretcli tx compute store "${wasm_path}/dummy_swap_data_receiver.wasm" --from "$deployer_name" --gas 3000000 -b block -y
+dummy_code_id=$(secretcli query compute list-code | jq '.[-1]."id"')
+dummy_code_hash=$(secretcli query compute list-code | jq '.[-1]."data_hash"')
+echo "Stored dummy: '$dummy_code_id', '$dummy_code_hash'"
+
 echo "Deploying ETH..."
 
 export TX_HASH=$(
@@ -58,6 +63,19 @@ secretcli q compute tx $TX_HASH
 
 dai_addr=$(secretcli query compute list-contract-by-code $token_code_id | jq '.[-1].address')
 echo "DAI address: '$dai_addr'"
+
+echo "Deploying dummy cashback..."
+
+label=dummy
+export TX_HASH=$(
+  secretcli tx compute instantiate $dummy_code_id '{}' --label $label --from $deployer_name -y |
+  jq -r .txhash
+)
+wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
+secretcli q compute tx $TX_HASH
+
+dummy_contract=$(secretcli query compute list-contract-by-code $dummy_code_id | jq '.[-1].address')
+echo "Dummy address: '$dummy_contract'"
 
 echo "Deploying AMM factory..."
 
@@ -93,10 +111,13 @@ secretcli tx compute execute $(echo "$eth_addr" | tr -d '"') '{"increase_allowan
 secretcli tx compute execute $(echo "$dai_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract_eth_dai', "amount": "1000000000000000000000"}}' -b block -y --from $deployer_name
 secretcli tx compute execute $(echo "$pair_contract_eth_dai" | tr -d '"') '{"provide_liquidity": {"assets": [{"info": {"token": {"contract_addr": '$dai_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}, "amount": "1000000000000000000000"}, {"info": {"token": {"contract_addr": '$eth_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}, "amount": "1000000000000000000000"}]}}' --from $deployer_name -y --gas 1500000 -b block
 
-secretcli tx send a secret1x6my6xxxkladvsupcka7k092m50rdw8pk8dpq9 100000000uscrt -y -b block
-secretcli tx compute execute $(echo "$eth_addr" | tr -d '"') '{"transfer":{"recipient":"secret1x6my6xxxkladvsupcka7k092m50rdw8pk8dpq9","amount":"1000000000000000000000"}}' --from a -y -b block
-secretcli tx compute execute $(echo "$dai_addr" | tr -d '"') '{"transfer":{"recipient":"secret1x6my6xxxkladvsupcka7k092m50rdw8pk8dpq9","amount":"1000000000000000000000"}}' --from a -y -b block
+secretcli tx compute execute $(echo "$factory_contract" | tr -d '"') '{"update_config": {"swap_data_endpoint": {"address":'$dummy_contract', "code_hash":'$dummy_code_hash'}}}' -b block -y --from $deployer_name
+
+secretcli tx send a secret1p6lyvpalxr769x4hu6fg34up2uwytzp5yylhad 100000000uscrt -y -b block
+secretcli tx compute execute $(echo "$eth_addr" | tr -d '"') '{"transfer":{"recipient":"secret1p6lyvpalxr769x4hu6fg34up2uwytzp5yylhad","amount":"1000000000000000000000"}}' --from a -y -b block
+secretcli tx compute execute $(echo "$dai_addr" | tr -d '"') '{"transfer":{"recipient":"secret1p6lyvpalxr769x4hu6fg34up2uwytzp5yylhad","amount":"1000000000000000000000"}}' --from a -y -b block
 
 echo Factory: "$factory_contract" | tr -d '"'
+echo Dummy: "$dummy_contract" | tr -d '"'
 echo ETH: "$eth_addr" | tr -d '"'
 echo DAI: "$dai_addr" | tr -d '"'
