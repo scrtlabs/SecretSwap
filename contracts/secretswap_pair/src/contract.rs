@@ -4,9 +4,9 @@ use std::{
 };
 
 use cosmwasm_std::{
-    debug_print, from_binary, log, to_binary, Api, Binary, CanonicalAddr, Coin, CosmosMsg, Decimal,
-    Env, Extern, HandleResponse, HandleResult, HumanAddr, InitResponse, Querier, StdError,
-    StdResult, Storage, Uint128, WasmMsg,
+    debug_print, from_binary, log, to_binary, Api, Binary, CanonicalAddr, CosmosMsg, Decimal, Env,
+    Extern, HandleResponse, HandleResult, HumanAddr, InitResponse, Querier, StdError, StdResult,
+    Storage, Uint128, WasmMsg,
 };
 use primitive_types::U256;
 //use ::{Cw20HandleMsg, Cw20ReceiveMsg, MinterResponse};
@@ -17,9 +17,13 @@ use secretswap::{
     PairInitMsg, TokenInitMsg,
 };
 
-use crate::math::{decimal_multiplication, decimal_subtraction, reverse_decimal};
-use crate::msg::{
-    Cw20HookMsg, HandleMsg, PoolResponse, QueryMsg, ReverseSimulationResponse, SimulationResponse,
+use crate::{
+    math::{decimal_multiplication, decimal_subtraction, reverse_decimal},
+    msg::{
+        Cw20HookMsg, HandleMsg, PoolResponse, QueryMsg, ReverseSimulationResponse,
+        SimulationResponse,
+    },
+    u256_math::*,
 };
 
 use crate::querier::query_pair_settings;
@@ -36,7 +40,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     let mut asset0 = msg.asset_infos[0].to_raw(&deps)?;
     let mut asset1 = msg.asset_infos[1].to_raw(&deps)?;
 
-    /* append set viewing key messages and store viewing keys */
+    // append set viewing key messages and store viewing keys
     let mut messages = vec![];
     match &msg.asset_infos[0] {
         AssetInfo::Token {
@@ -360,9 +364,8 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
         let deposit_0 = U256::from(deposits[0].u128());
         let deposit_1 = U256::from(deposits[1].u128());
 
-        let sqrt = deposit_0
-            .checked_mul(deposit_1)
-            .and_then(|mul| u256_sqrt(mul))
+        let sqrt = mul(Some(deposit_0), Some(deposit_1))
+            .and_then(|prod| u256_sqrt(prod))
             .ok_or_else(|| {
                 StdError::generic_err(format!(
                     "Cannot calculate sqrt(deposit_0 {} * deposit_1 {})",
@@ -384,33 +387,31 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
         //   deposits[1].multiply_ratio(total_share, pools[1].amount),
         // )
 
-        let total_share = U256::from(total_share.u128());
+        let total_share = Some(U256::from(total_share.u128()));
 
-        let deposit0 = U256::from(deposits[0].u128());
-        let pools0_amount = U256::from(pools[0].amount.u128());
+        let deposit0 = Some(U256::from(deposits[0].u128()));
+        let pools0_amount = Some(U256::from(pools[0].amount.u128()));
 
-        let share0 = deposit0
-            .checked_mul(total_share)
-            .and_then(|res| res.checked_div(pools0_amount))
-            .ok_or_else(|| {
-                StdError::generic_err(format!(
-                    "Cannot calculate deposits[0] {} * total_share {} / pools[0].amount {}",
-                    deposit0, total_share, pools0_amount
-                ))
-            })?;
+        let share0 = div(mul(deposit0, total_share), pools0_amount).ok_or_else(|| {
+            StdError::generic_err(format!(
+                "Cannot calculate deposits[0] {} * total_share {} / pools[0].amount {}",
+                deposit0.unwrap(),
+                total_share.unwrap(),
+                pools0_amount.unwrap()
+            ))
+        })?;
 
-        let deposit1 = U256::from(deposits[1].u128());
-        let pools1_amount = U256::from(pools[1].amount.u128());
+        let deposit1 = Some(U256::from(deposits[1].u128()));
+        let pools1_amount = Some(U256::from(pools[1].amount.u128()));
 
-        let share1 = deposit1
-            .checked_mul(total_share)
-            .and_then(|res| res.checked_div(pools1_amount))
-            .ok_or_else(|| {
-                StdError::generic_err(format!(
-                    "Cannot calculate deposits[1] {} * total_share {} / pools[1].amount {}",
-                    deposit1, total_share, pools1_amount
-                ))
-            })?;
+        let share1 = div(mul(deposit1, total_share), pools1_amount).ok_or_else(|| {
+            StdError::generic_err(format!(
+                "Cannot calculate deposits[1] {} * total_share {} / pools[1].amount {}",
+                deposit1.unwrap(),
+                total_share.unwrap(),
+                pools1_amount.unwrap()
+            ))
+        })?;
 
         Uint128(std::cmp::min(share0, share1).low_u128())
     };
@@ -435,41 +436,6 @@ pub fn try_provide_liquidity<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-/// U256 sqrt ported from here: https://ethereum.stackexchange.com/a/87713/12112
-///
-/// function sqrt(uint y) internal pure returns (uint z) {
-///     if (y > 3) {
-///         z = y;
-///         uint x = y / 2 + 1;
-///         while (x < z) {
-///             z = x;
-///             x = (y / x + x) / 2;
-///         }
-///     } else if (y != 0) {
-///         z = 1;
-///     }
-/// }
-///
-/// Tested it here: https://github.com/enigmampc/u256-sqrt-test/blob/aa7693/src/main.rs
-fn u256_sqrt(y: U256) -> Option<U256> {
-    let mut z = U256::from(0);
-    if y.gt(&U256::from(3)) {
-        z = y.clone();
-        let mut x = y.checked_div(U256::from(2))?.checked_add(U256::from(1))?;
-        while x.lt(&z) {
-            z = x.clone();
-            x = y
-                .checked_div(x)?
-                .checked_add(x)?
-                .checked_div(U256::from(2))?;
-        }
-    } else if !y.is_zero() {
-        z = U256::from(1);
-    }
-
-    return Some(z);
-}
-
 pub fn try_withdraw_liquidity<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
@@ -485,21 +451,28 @@ pub fn try_withdraw_liquidity<S: Storage, A: Api, Q: Querier>(
     let refund_assets: Vec<Asset> = pools
         .iter()
         .map(|a| {
-            // new_asset_amount = a.amount * amount / total_share
+            // withdrawn_asset_amount = a.amount * amount / total_share
 
-            let new_asset_amount = U256::from(a.amount.u128())
-                .checked_mul(U256::from(amount.u128()))
-                .and_then(|res| res.checked_div(U256::from(total_share.u128())))
+            let current_pool_amount = Some(U256::from(a.amount.u128()));
+            let withdrawn_share_amount = Some(U256::from(amount.u128()));
+            let total_share = Some(U256::from(total_share.u128()));
+
+            let withdrawn_asset_amount = div(
+                mul(current_pool_amount, withdrawn_share_amount),
+                total_share,
+            )
                 .ok_or_else(|| {
                     StdError::generic_err(format!(
-                        "Cannot calculate a.amount {} * amount {} / total_share {}",
-                        a.amount, amount, total_share
+                    "Cannot calculate current_pool_amount {} * withdrawn_share_amount {} / total_share {}",
+                    a.amount,
+                    amount,
+                    total_share.unwrap()
                     ))
                 })?;
 
             Ok(Asset {
                 info: a.info.clone(),
-                amount: Uint128(new_asset_amount.low_u128()),
+                amount: Uint128(withdrawn_asset_amount.low_u128()),
             })
         })
         .collect::<StdResult<Vec<Asset>>>()?;
@@ -792,13 +765,6 @@ pub fn query_reverse_simulation<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-pub fn amount_of(coins: &[Coin], denom: String) -> Uint128 {
-    match coins.iter().find(|x| x.denom == denom) {
-        Some(coin) => coin.amount,
-        None => Uint128::zero(),
-    }
-}
-
 fn compute_swap(
     offer_pool: Uint128,
     ask_pool: Uint128,
@@ -807,102 +773,70 @@ fn compute_swap(
     commission_rate_denom: Uint128,
 ) -> StdResult<(Uint128, Uint128, Uint128)> {
     // offer => ask
-    let offer_pool = U256::from(offer_pool.u128());
-    let ask_pool = U256::from(ask_pool.u128());
-    let offer_amount = U256::from(offer_amount.u128());
+    let offer_pool = Some(U256::from(offer_pool.u128()));
+    let ask_pool = Some(U256::from(ask_pool.u128()));
+    let offer_amount = Some(U256::from(offer_amount.u128()));
 
     // cp = offer_pool * ask_pool
-    // ask_amount = (ask_pool - cp / (offer_pool + offer_amount)) * (1 - commission_rate)
-
-    let cp = offer_pool.checked_mul(ask_pool).ok_or_else(|| {
+    let cp = mul(offer_pool, ask_pool);
+    cp.ok_or_else(|| {
         StdError::generic_err(format!(
-            "Cannot calculate offer_pool {} * ask_pool {}",
-            offer_pool, ask_pool
+            "Cannot calculate cp = offer_pool {} * ask_pool {}",
+            offer_pool.unwrap(),
+            ask_pool.unwrap()
         ))
     })?;
 
-    let new_offer_pool = offer_pool.checked_add(offer_amount).ok_or_else(|| {
-        StdError::generic_err(format!(
-            "Cannot calculate offer_pool {} + offer_amount {}",
-            offer_pool, offer_amount
-        ))
-    })?;
-    // ask_amount = (ask_pool - cp / new_offer_pool) * (1 - commission_rate)
-
-    let cp_div_new_offer_pool = cp.checked_div(new_offer_pool).ok_or_else(|| {
-        StdError::generic_err(format!(
-            "Cannot calculate cp {} / new_offer_pool {}",
-            cp, new_offer_pool
-        ))
-    })?;
-    // ask_amount = (ask_pool - cp_div_new_offer_pool) * (1 - commission_rate)
-
-    let return_amount = ask_pool.checked_sub(cp_div_new_offer_pool).ok_or_else(|| {
-        StdError::generic_err(format!(
-            "Cannot calculate ask_pool {} - cp_div_new_offer_pool {}",
-            ask_pool, cp_div_new_offer_pool
-        ))
-    })?;
+    // return_amount = (ask_pool - cp / (offer_pool + offer_amount))
     // ask_amount = return_amount * (1 - commission_rate)
+    let return_amount = sub(ask_pool, div(cp, add(offer_pool, offer_amount)));
+    return_amount.ok_or_else(|| {
+        StdError::generic_err(format!(
+            "Cannot calculate return_amount = (ask_pool {} - cp {} / (offer_pool {} + offer_amount {}))",
+            ask_pool.unwrap(),
+            cp.unwrap(),
+            offer_pool.unwrap(),
+            offer_amount.unwrap(),
+        ))
+    })?;
 
     // calculate spread & commission
     // spread = offer_amount * ask_pool / offer_pool - return_amount
-    let offer_amount_mul_ask_pool = offer_amount.checked_mul(ask_pool).ok_or_else(|| {
+    let spread_amount = div(mul(offer_amount, ask_pool), offer_pool)
+        .ok_or_else(|| {
+            StdError::generic_err(format!(
+                "Cannot calculate offer_amount {} * ask_pool {} / offer_pool {}",
+                offer_amount.unwrap(),
+                ask_pool.unwrap(),
+                offer_pool.unwrap()
+            ))
+        })?
+        .saturating_sub(return_amount.unwrap());
+
+    // commission_amount = return_amount * commission_rate_nom / commission_rate_denom
+    let commission_rate_nom = Some(U256::from(commission_rate_nom.u128()));
+    let commission_rate_denom = Some(U256::from(commission_rate_denom.u128()));
+    let commission_amount = div(
+        mul(return_amount, commission_rate_nom),
+        commission_rate_denom,
+    )
+    .ok_or_else(|| {
         StdError::generic_err(format!(
-            "Cannot calculate offer_amount {} * ask_pool {}",
-            offer_amount, ask_pool
+            "Cannot calculate return_amount {} * commission_rate_nom {} / commission_rate_denom {}",
+            return_amount.unwrap(),
+            commission_rate_nom.unwrap(),
+            commission_rate_denom.unwrap()
         ))
     })?;
-    // spread = offer_amount_mul_ask_pool / offer_pool - return_amount
-
-    let offer_amount_mul_ask_pool_div_offer_pool = offer_amount_mul_ask_pool
-        .checked_div(offer_pool)
-        .ok_or_else(|| {
-            StdError::generic_err(format!(
-                "Cannot calculate offer_amount_mul_ask_pool {} / offer_pool {}",
-                offer_amount_mul_ask_pool, offer_pool
-            ))
-        })?;
-    // spread = offer_amount_mul_ask_pool_div_offer_pool - return_amount
-
-    let spread_amount = offer_amount_mul_ask_pool_div_offer_pool
-        .checked_sub(return_amount)
-        .ok_or_else(|| {
-            StdError::generic_err(format!(
-                "Cannot calculate offer_amount_mul_ask_pool_div_offer_pool {} - return_amount {}",
-                offer_amount_mul_ask_pool_div_offer_pool, return_amount
-            ))
-        })?;
-
-    // commission_amount = return_amount * COMMISSION_RATE_NOM / COMMISSION_RATE_DENOM
-    let commission_amount_nom = return_amount
-        .checked_mul(U256::from(commission_rate_nom.u128()))
-        .ok_or_else(|| {
-            StdError::generic_err(format!(
-                "Cannot calculate return_amount {} * COMMISSION_RATE_NOM {}",
-                return_amount, commission_rate_nom
-            ))
-        })?;
-    // commission_amount = commission_amount_nom / COMMISSION_RATE_DENOM
-
-    let commission_amount = commission_amount_nom
-        .checked_div(U256::from(commission_rate_denom.u128()))
-        .ok_or_else(|| {
-            StdError::generic_err(format!(
-                "Cannot calculate commission_amount_nom {} / COMMISSION_RATE_DENOM {}",
-                commission_amount_nom, commission_rate_denom
-            ))
-        })?;
 
     // commission will be absorbed to pool
-    let return_amount = return_amount
-        .checked_sub(commission_amount)
-        .ok_or_else(|| {
-            StdError::generic_err(format!(
-                "Cannot calculate return_amount {} - commission_amount {}",
-                return_amount, commission_amount
-            ))
-        })?;
+    let return_amount = sub(return_amount, Some(commission_amount)).ok_or_else(|| {
+        StdError::generic_err(format!(
+            "Cannot calculate return_amount {} - commission_amount {}",
+            return_amount.unwrap(),
+            commission_amount
+        ))
+    })?;
 
     Ok((
         Uint128(return_amount.low_u128()),
@@ -918,6 +852,8 @@ fn compute_offer_amount(
     commission_rate_nom: u128,
     commission_rate_denom: u128,
 ) -> StdResult<(Uint128, Uint128, Uint128)> {
+    // Note: SecretSwap never goes in here
+
     // ask => offer
     // offer_amount = cp / (ask_pool - ask_amount / (1 - commission_rate)) - offer_pool
     let cp = Uint128(offer_pool.u128() * ask_pool.u128());
@@ -960,6 +896,7 @@ pub fn assert_max_spread(
             ));
         }
     } else if let (Some(max_spread), Some(belief_price)) = (max_spread, belief_price) {
+        // Note: SecretSwap never goes in here
         let return_amount = return_amount + commission_amount;
         let expected_return = offer_amount.mul(reverse_decimal(belief_price));
 
@@ -974,6 +911,7 @@ pub fn assert_max_spread(
             ));
         }
     } else if let Some(max_spread) = max_spread {
+        // Note: SecretSwap never goes in here
         let return_amount = return_amount + commission_amount;
         if Decimal::from_ratio(spread_amount, return_amount.add(spread_amount)).gt(&max_spread) {
             return Err(StdError::generic_err("Operation exceeds max spread limit"));
@@ -988,6 +926,7 @@ fn assert_slippage_tolerance(
     deposits: &[Uint128; 2],
     pools: &[Asset; 2],
 ) -> StdResult<()> {
+    // Note: SecretSwap never goes in here
     if let Some(slippage_tolerance) = *slippage_tolerance {
         let one_minus_slippage_tolerance = decimal_subtraction(Decimal::one(), slippage_tolerance)?;
 

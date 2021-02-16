@@ -3,6 +3,7 @@ pub mod math;
 pub mod msg;
 pub mod querier;
 pub mod state;
+pub mod u256_math;
 
 #[cfg(test)]
 mod testing;
