@@ -276,7 +276,10 @@ pub fn query_config<S: Storage, A: Api, Q: Querier>(
     let resp = ConfigResponse {
         owner: deps.api.human_address(&state.owner)?,
         token_code_id: state.token_code_id,
+        token_code_hash: state.token_code_hash,
         pair_code_id: state.pair_code_id,
+        pair_code_hash: state.pair_code_hash,
+        pair_settings: state.pair_settings,
     };
 
     Ok(resp)

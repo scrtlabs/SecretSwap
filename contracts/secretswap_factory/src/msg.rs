@@ -2,7 +2,7 @@ use cosmwasm_std::{Binary, HumanAddr};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use secretswap::{AssetInfo, Fee, InitHook, PairInfo, SwapDataEndpoint};
+use secretswap::{AssetInfo, Fee, InitHook, PairInfo, PairSettings, SwapDataEndpoint};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
@@ -58,7 +58,10 @@ pub enum QueryMsg {
 pub struct ConfigResponse {
     pub owner: HumanAddr,
     pub pair_code_id: u64,
+    pub pair_code_hash: String,
     pub token_code_id: u64,
+    pub token_code_hash: String,
+    pub pair_settings: PairSettings,
 }
 
 // We define a custom struct for each query response
