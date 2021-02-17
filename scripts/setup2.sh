@@ -43,7 +43,7 @@ echo "Stored dummy: '$dummy_code_id', '$dummy_code_hash'"
 echo "Deploying ETH..."
 
 export TX_HASH=$(
-  secretcli tx compute instantiate $token_code_id '{"admin": "'$deployer_address'", "symbol": "SETH", "decimals": 18, "initial_balances": [{"address": "'$deployer_address'", "amount": "100000000000000000000000"}], "prng_seed": "YWE", "name": "test"}' --from $deployer_name --gas 1500000 --label ETH -b block -y |
+  secretcli tx compute instantiate $token_code_id '{"admin": "'$deployer_address'", "symbol": "SETH", "decimals": 18, "initial_balances": [{"address": "'$deployer_address'", "amount": "100000000000000000000000"}], "prng_seed": "YWE=", "name": "test"}' --from $deployer_name --gas 1500000 --label ETH -b block -y |
   jq -r .txhash
 )
 wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
@@ -55,7 +55,7 @@ echo "ETH address: '$eth_addr'"
 echo "Deploying DAI..."
 
 export TX_HASH=$(
-  secretcli tx compute instantiate $token_code_id '{"admin": "'$deployer_address'", "symbol": "SDAI", "decimals": 18, "initial_balances": [{"address": "'$deployer_address'", "amount": "100000000000000000000000"}], "prng_seed": "YWE", "name": "test"}' --from $deployer_name --gas 1500000 --label DAI -b block -y |
+  secretcli tx compute instantiate $token_code_id '{"admin": "'$deployer_address'", "symbol": "SDAI", "decimals": 18, "initial_balances": [{"address": "'$deployer_address'", "amount": "100000000000000000000000"}], "prng_seed": "YWE=", "name": "test"}' --from $deployer_name --gas 1500000 --label DAI -b block -y |
   jq -r .txhash
 )
 wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
@@ -81,7 +81,7 @@ echo "Deploying AMM factory..."
 
 label=amm
 export TX_HASH=$(
-  secretcli tx compute instantiate $factory_code_id '{"pair_code_id": '$pair_code_id', "pair_code_hash": '$pair_code_hash', "token_code_id": '$token_code_id', "token_code_hash": '$token_code_hash', "prng_seed": "YWE"}' --label $label --from $deployer_name -y |
+  secretcli tx compute instantiate $factory_code_id '{"pair_code_id": '$pair_code_id', "pair_code_hash": '$pair_code_hash', "token_code_id": '$token_code_id', "token_code_hash": '$token_code_hash', "prng_seed": "YWE="}' --label $label --from $deployer_name -y |
   jq -r .txhash
 )
 wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
@@ -90,15 +90,15 @@ secretcli q compute tx $TX_HASH
 factory_contract=$(secretcli query compute list-contract-by-code $factory_code_id | jq '.[-1].address')
 echo "Factory address: '$factory_contract'"
 
-echo "Creating sETH/SCRT pair..."
+# echo "Creating sETH/SCRT pair..."
 
-secretcli tx compute execute --label $label '{"create_pair": {"asset_infos": [{"token": {"contract_addr": '$eth_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}},{"native_token": {"denom": "uscrt"}}]}}' --from $deployer_name -y --gas 1500000 -b block
+# secretcli tx compute execute --label $label '{"create_pair": {"asset_infos": [{"token": {"contract_addr": '$eth_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}},{"native_token": {"denom": "uscrt"}}]}}' --from $deployer_name -y --gas 1500000 -b block
 
-pair_contract=$(secretcli query compute list-contract-by-code $pair_code_id | jq '.[-1].address')
-echo "sETH/SCRT Pair contract address: '$pair_contract'"
+# pair_contract=$(secretcli query compute list-contract-by-code $pair_code_id | jq '.[-1].address')
+# echo "sETH/SCRT Pair contract address: '$pair_contract'"
 
-secretcli tx compute execute $(echo "$eth_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract', "amount": "1000000000000000000000"}}' -b block -y --from $deployer_name
-secretcli tx compute execute $(echo "$pair_contract" | tr -d '"') '{"provide_liquidity": {"assets": [{"info": {"native_token": {"denom": "uscrt"}}, "amount": "100000000"}, {"info": {"token": {"contract_addr": '$eth_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}, "amount": "1000000000000000000000"}]}}' --amount 100000000uscrt --from $deployer_name -y --gas 1500000 -b block
+# secretcli tx compute execute $(echo "$eth_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract', "amount": "1000000000000000000000"}}' -b block -y --from $deployer_name
+# secretcli tx compute execute $(echo "$pair_contract" | tr -d '"') '{"provide_liquidity": {"assets": [{"info": {"native_token": {"denom": "uscrt"}}, "amount": "100000000"}, {"info": {"token": {"contract_addr": '$eth_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}, "amount": "1000000000000000000000"}]}}' --amount 100000000uscrt --from $deployer_name -y --gas 1500000 -b block
 
 echo "Creating sETH/sDAI pair..."
 
