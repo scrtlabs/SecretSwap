@@ -23,31 +23,40 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::Receive { from, msg, amount } => {
             if let Some(bin_msg) = msg {
                 match from_binary(&bin_msg)? {
-                    Route { hops } => {}
-                    _ => {
-                        return Err(StdError::generic_err(format!(
-                            "data not in correct type: {:?}",
-                            bin_msg
-                        )))
+                    Route { hops, to } => {
+                        // TODO
+                        // 1. save the remaining route to state (e.g. if the route is X/Y -> Y/Z -> Z->W then save Y/Z -> Z/W to state)
+                        // 2. send `amount` X to pair X/Y
                     }
+                    _ => { /* TODO error  */ }
                 }
             } else {
-                return Err(StdError::generic_err("data should be given"));
+                // TODO
+                // 1. load route from state (Y/Z -> Z/W)
+                // 2. save the remaining route to state (Z/W)
+                // 3. send `amount` Y to pair Y/Z
+
+                // 1'. load route from state (Z/W)
+                // 2'. this is the last hop so delete the entire route state
+                // 3'. send `amount` Z to pair Z/W with recepient `to`
             }
         }
-        HandleMsg::RegisterRootToken {
-            token_address,
-            token_code_hash,
-        } => {
-            // TODO add token_address to list of registered tokens
-            return Ok(HandleResponse {
-                messages: vec![snip20::register_receive_msg(
+        HandleMsg::RegisterRootTokens { tokens } => {
+            let mut msgs = vec![];
+
+            for token in tokens {
+                msgs.push(snip20::register_receive_msg(
                     env.contract_code_hash.clone(),
                     None,
                     256,
-                    token_code_hash.clone(),
-                    token_address.clone(),
-                )?],
+                    token.code_hash.clone(),
+                    token.address.clone(),
+                )?)
+                // TODO add token_address to list of registered tokens
+            }
+
+            return Ok(HandleResponse {
+                messages: msgs,
                 log: vec![],
                 data: None,
             });

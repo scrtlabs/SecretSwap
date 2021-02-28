@@ -15,7 +15,14 @@ pub struct Hop {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Route {
-    hops: Vec<Hop>,
+    pub hops: Vec<Hop>,
+    pub to: Option<HumanAddr>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct Token {
+    pub address: HumanAddr,
+    pub code_hash: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -26,9 +33,8 @@ pub enum HandleMsg {
         msg: Option<Binary>,
         amount: Uint128,
     },
-    RegisterRootToken {
-        token_address: HumanAddr,
-        token_code_hash: String,
+    RegisterRootTokens {
+        tokens: Vec<Token>,
     },
 }
 
