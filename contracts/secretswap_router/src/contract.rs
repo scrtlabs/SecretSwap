@@ -73,7 +73,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                         first_hop.pair_address,
                         amount,
                         Some(to_binary(&Swap::Swap {
+                            // set expected_return to None because we don't care about slippage mid-route
                             expected_return: None,
+                            // set the recepient of the swap to be this contract (the router)
                             to: Some(env.contract.address.clone()),
                         })?),
                         None,
@@ -97,6 +99,83 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             msg: None,
             amount,
         } => {
+            match read_route_state(&deps.storage)? {
+                Some(RouteState {
+                    is_done,
+                    remaining_route,
+                }) => {
+                    if remaining_route.hops.len() == 0 {
+                        return Err(StdError::generic_err("route must be at least 1 hop"));
+                    }
+
+                    let next_hop: Hop = remaining_route.hops[0].clone();
+
+                    if env.message.sender != next_hop.from_token.address {
+                        return Err(StdError::generic_err(
+                            "route can only be called by sending here the token of the next hop",
+                        ));
+                    }
+
+                    let mut is_done = false;
+                    let mut msgs = vec![];
+                    if remaining_route.hops.len() == 1 {
+                        // last hop
+                        // 1. set is_done to true for FinalizeRoute
+                        // 2. set expected_return for the final swap
+                        // 3. set the recepient of the final swap to be the user
+                        is_done = true;
+                        msgs.push(snip20::send_msg(
+                            next_hop.pair_address,
+                            amount,
+                            Some(to_binary(&Swap::Swap {
+                                expected_return: next_hop.expected_return,
+                                to: Some(remaining_route.to.clone()),
+                            })?),
+                            None,
+                            256,
+                            next_hop.from_token.code_hash,
+                            next_hop.from_token.address,
+                        )?)
+                    } else {
+                        // not last hop
+                        // 1. set expected_return to None because we don't care about slippage mid-route
+                        // 2. set the recepient of the swap to be this contract (the router)
+                        msgs.push(snip20::send_msg(
+                            next_hop.pair_address,
+                            amount,
+                            Some(to_binary(&Swap::Swap {
+                                expected_return: None,
+                                to: Some(env.contract.address.clone()),
+                            })?),
+                            None,
+                            256,
+                            next_hop.from_token.code_hash,
+                            next_hop.from_token.address,
+                        )?)
+                    }
+
+                    let remaining_hops: Vec<Hop> = remaining_route.hops[1..].to_vec();
+
+                    store_route_state(
+                        &mut deps.storage,
+                        &RouteState {
+                            is_done,
+                            remaining_route: Route {
+                                hops: remaining_hops,
+                                to: remaining_route.to.clone(),
+                            },
+                        },
+                    )?;
+
+                    Ok(HandleResponse {
+                        messages: msgs,
+                        log: vec![],
+                        data: None,
+                    })
+                }
+                None => Err(StdError::generic_err("cannot find route")),
+            }
+
             // TODO
             // env.msg.sender is the sending token
 
@@ -107,7 +186,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             // 1'. load route from state (Z/W)
             // 2'. this is the last hop so delete the entire route state
             // 3'. send `amount` Z to pair Z/W with recepient `to`
-            Ok(HandleResponse::default())
         }
         HandleMsg::FinalizeRoute {} => match read_route_state(&deps.storage)? {
             Some(route_state) => {
