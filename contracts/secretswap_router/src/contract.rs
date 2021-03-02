@@ -69,6 +69,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
             Ok(HandleResponse {
                 messages: vec![
+                    // swap msg for the next hop
                     snip20::send_msg(
                         first_hop.pair_address,
                         amount,
@@ -83,6 +84,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                         first_hop.from_token.code_hash,
                         first_hop.from_token.address,
                     )?,
+                    // finalize the route at the end, to make sure the route was fully taken
                     CosmosMsg::Wasm(WasmMsg::Execute {
                         contract_addr: env.contract.address.clone(),
                         callback_code_hash: env.contract_code_hash.clone(),
@@ -99,6 +101,14 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             msg: None,
             amount,
         } => {
+            // This is a receive msg somewhere along the route
+            // 1. load route from state (Y/Z -> Z/W)
+            // 2. save the remaining route to state (Z/W)
+            // 3. send `amount` Y to pair Y/Z
+
+            // 1'. load route from state (Z/W)
+            // 2'. this is the last hop so delete the entire route state
+            // 3'. send `amount` Z to pair Z/W with recepient `to`
             match read_route_state(&deps.storage)? {
                 Some(RouteState {
                     is_done: _,
@@ -175,23 +185,19 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 }
                 None => Err(StdError::generic_err("cannot find route")),
             }
-
-            // TODO
-            // env.msg.sender is the sending token
-
-            // 1. load route from state (Y/Z -> Z/W)
-            // 2. save the remaining route to state (Z/W)
-            // 3. send `amount` Y to pair Y/Z
-
-            // 1'. load route from state (Z/W)
-            // 2'. this is the last hop so delete the entire route state
-            // 3'. send `amount` Z to pair Z/W with recepient `to`
         }
         HandleMsg::FinalizeRoute {} => match read_route_state(&deps.storage)? {
             Some(RouteState {
                 is_done,
                 remaining_route,
             }) => {
+                // this function is called only by the route creatin function
+                // it is intended to always make sure that the route was fully taken
+                // otherwise we'll revert the transaction
+
+                if env.contract.address != env.message.sender {
+                    return Err(StdError::unauthorized());
+                }
                 if !is_done {
                     return Err(StdError::generic_err("cannot finalize: route is not done"));
                 }
