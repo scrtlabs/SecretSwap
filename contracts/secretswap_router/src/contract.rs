@@ -214,6 +214,11 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             None => Err(StdError::generic_err("no route to finalize")),
         },
         HandleMsg::RegisterTokens { tokens } => {
+            let owner = read_owner(&deps.storage)?;
+            if owner != env.message.sender {
+                return Err(StdError::unauthorized());
+            }
+
             let mut registered_tokens = read_tokens(&deps.storage)?;
             let mut msgs = vec![];
 
