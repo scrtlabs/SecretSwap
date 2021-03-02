@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     debug_print, from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
-    HandleResult, HumanAddr, InitResponse, Querier, StdError, StdResult, Storage, WasmMsg,
+    HumanAddr, InitResponse, Querier, StdError, StdResult, Storage, WasmMsg,
 };
 use secret_toolkit::snip20;
 use HandleMsg::RecoverFunds;
@@ -31,7 +31,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     match msg {
         HandleMsg::Receive {
-            from,
+            from: _,
             msg: Some(msg),
             amount,
         } => {
@@ -95,13 +95,13 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             })
         }
         HandleMsg::Receive {
-            from,
+            from: _,
             msg: None,
             amount,
         } => {
             match read_route_state(&deps.storage)? {
                 Some(RouteState {
-                    is_done,
+                    is_done: _,
                     remaining_route,
                 }) => {
                     if remaining_route.hops.len() == 0 {
@@ -188,10 +188,19 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             // 3'. send `amount` Z to pair Z/W with recepient `to`
         }
         HandleMsg::FinalizeRoute {} => match read_route_state(&deps.storage)? {
-            Some(route_state) => {
-                if !route_state.is_done {
-                    return Err(StdError::generic_err("route is not done"));
+            Some(RouteState {
+                is_done,
+                remaining_route,
+            }) => {
+                if !is_done {
+                    return Err(StdError::generic_err("cannot finalize: route is not done"));
                 }
+                if remaining_route.hops.len() != 0 {
+                    return Err(StdError::generic_err(
+                        "cannot finalize: route still has hops",
+                    ));
+                }
+
                 delete_route_state(&mut deps.storage);
 
                 Ok(HandleResponse::default())
@@ -273,5 +282,10 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
     _deps: &Extern<S, A, Q>,
     _msg: QueryMsg,
 ) -> StdResult<Binary> {
-    Ok(Binary(vec![]))
+    match _msg {
+        QueryMsg::SupportedTokens {} => {
+            let tokens = read_tokens(&_deps.storage)?;
+            Ok(to_binary(&tokens)?)
+        }
+    }
 }
