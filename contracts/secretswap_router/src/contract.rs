@@ -1,6 +1,6 @@
 use cosmwasm_std::{
     debug_print, from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
-    HumanAddr, InitResponse, Querier, StdError, StdResult, Storage, WasmMsg,
+    InitResponse, Querier, StdError, StdResult, Storage, WasmMsg,
 };
 use secret_toolkit::snip20;
 use HandleMsg::RecoverFunds;
