@@ -136,8 +136,8 @@ pair_contract_eth_dai=$(secretcli query compute list-contract-by-code $pair_code
 echo "sETH/sDAI Pair contract address: '$pair_contract_eth_dai'"
 
 secretcli tx compute execute $(echo "$eth_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract_eth_dai', "amount": "1000000000000000000000"}}' -b block -y --from $deployer_name
-secretcli tx compute execute $(echo "$dai_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract_eth_dai', "amount": "20000000000000000000000"}}' -b block -y --from $deployer_name
-secretcli tx compute execute $(echo "$pair_contract_eth_dai" | tr -d '"') '{"provide_liquidity": {"assets": [{"info": {"token": {"contract_addr": '$dai_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}, "amount": "20000000000000000000000"}, {"info": {"token": {"contract_addr": '$eth_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}, "amount": "1000000000000000000000"}]}}' --from $deployer_name -y --gas 1500000 -b block
+secretcli tx compute execute $(echo "$dai_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract_eth_dai', "amount": "2000000000000000000000"}}' -b block -y --from $deployer_name
+secretcli tx compute execute $(echo "$pair_contract_eth_dai" | tr -d '"') '{"provide_liquidity": {"assets": [{"info": {"token": {"contract_addr": '$dai_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}, "amount": "2000000000000000000000"}, {"info": {"token": {"contract_addr": '$eth_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}, "amount": "1000000000000000000000"}]}}' --from $deployer_name -y --gas 1500000 -b block
 
 echo "Creating sWBTC/sDAI pair..."
 
