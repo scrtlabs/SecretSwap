@@ -95,7 +95,6 @@ echo "Dummy address: '$dummy_contract'"
 
 echo "Deploying router..."
 
-label=router
 export TX_HASH=$(
   secretcli tx compute instantiate $router_code_id '{}' --label router --from $deployer_name -y |
   jq -r .txhash
