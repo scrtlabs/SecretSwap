@@ -21,8 +21,9 @@ pub struct Route {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Token {
-    pub address: HumanAddr,
-    pub code_hash: String,
+    pub address: Option<HumanAddr>,   // must set only these if a token
+    pub code_hash: Option<String>,    // must set only these if a token
+    pub native_denom: Option<String>, // must set only this if native coin
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

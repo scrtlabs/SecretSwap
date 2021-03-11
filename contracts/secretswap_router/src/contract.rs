@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    debug_print, from_binary, to_binary, Api, Binary, CosmosMsg, Env, Extern, HandleResponse,
+    debug_print, from_binary, to_binary, Api, Binary, Coin, CosmosMsg, Env, Extern, HandleResponse,
     InitResponse, Querier, StdError, StdResult, Storage, WasmMsg,
 };
 use secret_toolkit::snip20;
@@ -42,13 +42,35 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
             let Route { hops, to } = from_binary(&msg)?;
 
-            if hops.len() <= 1 {
+            if hops.len() < 2 {
                 return Err(StdError::generic_err("route must be at least 2 hops"));
+            }
+
+            for i in 1..(hops.len() - 1) {
+                if hops[i].from_token.address == None
+                    || hops[i].from_token.code_hash == None
+                    || hops[i].from_token.native_denom != None
+                {
+                    return Err(StdError::generic_err(
+                        "cannot route via uscrt. uscrt can only be route input token or output token.",
+                    ));
+                }
             }
 
             let first_hop: Hop = hops[0].clone();
 
-            if env.message.sender != first_hop.from_token.address {
+            let received_from_token_of_first_hop =
+                Some(env.message.sender) == first_hop.from_token.address;
+
+            let mut received_scrt = false;
+            let mut scrt_is_first_hop = false;
+            if env.message.sent_funds.len() == 1 {
+                received_scrt = env.message.sent_funds[0].amount == amount
+                    && env.message.sent_funds[0].denom == "uscrt";
+                scrt_is_first_hop = first_hop.from_token.native_denom == Some("uscrt".into());
+            }
+
+            if !received_from_token_of_first_hop && !(received_scrt && scrt_is_first_hop) {
                 return Err(StdError::generic_err(
                     "route can only be initiated by sending here the token of the first hop",
                 ));
@@ -67,31 +89,59 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 },
             )?;
 
-            Ok(HandleResponse {
-                messages: vec![
-                    // swap msg for the next hop
-                    snip20::send_msg(
-                        first_hop.pair_address,
-                        amount,
-                        Some(to_binary(&Swap::Swap {
-                            // set expected_return to None because we don't care about slippage mid-route
-                            expected_return: None,
-                            // set the recepient of the swap to be this contract (the router)
-                            to: Some(env.contract.address.clone()),
-                        })?),
-                        None,
-                        256,
-                        first_hop.from_token.code_hash,
-                        first_hop.from_token.address,
-                    )?,
+            let mut msgs = vec![];
+
+            // build swap msg for the next hop
+            let swap_msg = to_binary(&Swap::Swap {
+                // set expected_return to None because we don't care about slippage mid-route
+                expected_return: None,
+                // set the recepient of the swap to be this contract (the router)
+                to: Some(env.contract.address.clone()),
+            })?;
+
+            if let (Some(token_address), Some(token_code_hash)) =
+                (first_hop.from_token.address, first_hop.from_token.code_hash)
+            {
+                // first hop is a snip20
+                msgs.push(snip20::send_msg(
+                    first_hop.pair_address,
+                    amount,
+                    Some(swap_msg),
+                    None,
+                    256,
+                    token_code_hash,
+                    token_address,
+                )?);
+            } else if first_hop.from_token.native_denom == Some("uscrt".into()) {
+                // first hop is SCRT
+                msgs.push(
                     // finalize the route at the end, to make sure the route was fully taken
                     CosmosMsg::Wasm(WasmMsg::Execute {
-                        contract_addr: env.contract.address.clone(),
-                        callback_code_hash: env.contract_code_hash.clone(),
-                        msg: to_binary(&HandleMsg::FinalizeRoute {})?,
-                        send: vec![],
+                        contract_addr: first_hop.pair_address,
+                        callback_code_hash: first_hop.pair_code_hash,
+                        msg: swap_msg,
+                        send: vec![Coin::new(amount.u128(), "uscrt")],
                     }),
-                ],
+                );
+            } else {
+                // shouldn't be here because we've tested this a few lines before
+                return Err(StdError::generic_err(
+                    "cannot build swap message for first hop",
+                ));
+            }
+
+            msgs.push(
+                // finalize the route at the end, to make sure the route was completed successfully
+                CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr: env.contract.address.clone(),
+                    callback_code_hash: env.contract_code_hash.clone(),
+                    msg: to_binary(&HandleMsg::FinalizeRoute {})?,
+                    send: vec![],
+                }),
+            );
+
+            Ok(HandleResponse {
+                messages: msgs,
                 log: vec![],
                 data: None,
             })
@@ -120,7 +170,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
                     let next_hop: Hop = remaining_route.hops[0].clone();
 
-                    if env.message.sender != next_hop.from_token.address {
+                    if Some(env.message.sender) != next_hop.from_token.address {
                         return Err(StdError::generic_err(
                             "route can only be called by sending here the token of the next hop",
                         ));
@@ -143,8 +193,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                             })?),
                             None,
                             256,
-                            next_hop.from_token.code_hash,
-                            next_hop.from_token.address,
+                            next_hop.from_token.code_hash.unwrap(), // tested before first hop
+                            next_hop.from_token.address.unwrap(),   // tested before first hop
                         )?)
                     } else {
                         // not last hop
@@ -159,8 +209,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                             })?),
                             None,
                             256,
-                            next_hop.from_token.code_hash,
-                            next_hop.from_token.address,
+                            next_hop.from_token.code_hash.unwrap(), // tested before first hop
+                            next_hop.from_token.address.unwrap(),   // tested before first hop
                         )?)
                     }
 
@@ -223,24 +273,34 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             let mut msgs = vec![];
 
             for token in tokens {
-                if registered_tokens.contains(&token.address) {
+                if token.address == None || token.code_hash == None {
+                    return Err(StdError::generic_err(format!(
+                        "token must have an 'address' and a 'code_hash': {:?}",
+                        token
+                    )));
+                }
+
+                let address = token.address.unwrap();
+                let code_hash = token.code_hash.unwrap();
+
+                if registered_tokens.contains(&address) {
                     continue;
                 }
-                registered_tokens.push(token.address.clone());
+                registered_tokens.push(address.clone());
 
                 msgs.push(snip20::register_receive_msg(
                     env.contract_code_hash.clone(),
                     None,
                     256,
-                    token.code_hash.clone(),
-                    token.address.clone(),
+                    code_hash.clone(),
+                    address.clone(),
                 )?);
                 msgs.push(snip20::set_viewing_key_msg(
                     String::from("SecretSwap Router"),
                     None,
                     256,
-                    token.code_hash.clone(),
-                    token.address.clone(),
+                    code_hash.clone(),
+                    address.clone(),
                 )?);
             }
 
@@ -263,6 +323,13 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 return Err(StdError::unauthorized());
             }
 
+            if token.address == None || token.code_hash == None {
+                return Err(StdError::generic_err(format!(
+                    "token must have an 'address' and a 'code_hash': {:?}",
+                    token
+                )));
+            }
+
             Ok(HandleResponse {
                 messages: vec![snip20::send_msg(
                     to,
@@ -270,8 +337,8 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                     snip20_send_msg,
                     None,
                     256,
-                    token.code_hash,
-                    token.address,
+                    token.code_hash.unwrap(),
+                    token.address.unwrap(),
                 )?],
                 log: vec![],
                 data: None,
