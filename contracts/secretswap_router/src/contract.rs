@@ -3,10 +3,11 @@ use cosmwasm_std::{
     InitResponse, Querier, StdError, StdResult, Storage, WasmMsg,
 };
 use secret_toolkit::snip20;
+use secretswap::{Asset, AssetInfo};
 use HandleMsg::RecoverFunds;
 
 use crate::{
-    msg::{HandleMsg, Hop, InitMsg, QueryMsg, Route, Swap},
+    msg::{HandleMsg, Hop, InitMsg, NativeSwap, QueryMsg, Route, Snip20Swap},
     state::{
         delete_route_state, read_owner, read_route_state, read_tokens, store_owner,
         store_route_state, store_tokens, RouteState,
@@ -91,14 +92,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
             let mut msgs = vec![];
 
-            // build swap msg for the next hop
-            let swap_msg = to_binary(&Swap::Swap {
-                // set expected_return to None because we don't care about slippage mid-route
-                expected_return: None,
-                // set the recepient of the swap to be this contract (the router)
-                to: Some(env.contract.address.clone()),
-            })?;
-
             if let (Some(token_address), Some(token_code_hash)) =
                 (first_hop.from_token.address, first_hop.from_token.code_hash)
             {
@@ -106,7 +99,13 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 msgs.push(snip20::send_msg(
                     first_hop.pair_address,
                     amount,
-                    Some(swap_msg),
+                    // build swap msg for the next hop
+                    Some(to_binary(&Snip20Swap::Swap {
+                        // set expected_return to None because we don't care about slippage mid-route
+                        expected_return: None,
+                        // set the recepient of the swap to be this contract (the router)
+                        to: Some(env.contract.address.clone()),
+                    })?),
                     None,
                     256,
                     token_code_hash,
@@ -119,7 +118,18 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                     CosmosMsg::Wasm(WasmMsg::Execute {
                         contract_addr: first_hop.pair_address,
                         callback_code_hash: first_hop.pair_code_hash,
-                        msg: swap_msg,
+                        msg: to_binary(&NativeSwap::Swap {
+                            offer_asset: Asset {
+                                amount,
+                                info: AssetInfo::NativeToken {
+                                    denom: "uscrt".into(),
+                                },
+                            },
+                            // set expected_return to None because we don't care about slippage mid-route
+                            expected_return: None,
+                            // set the recepient of the swap to be this contract (the router)
+                            to: Some(env.contract.address.clone()),
+                        })?,
                         send: vec![Coin::new(amount.u128(), "uscrt")],
                     }),
                 );
@@ -187,7 +197,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                         msgs.push(snip20::send_msg(
                             next_hop.pair_address,
                             amount,
-                            Some(to_binary(&Swap::Swap {
+                            Some(to_binary(&Snip20Swap::Swap {
                                 expected_return: next_hop.expected_return,
                                 to: Some(remaining_route.to.clone()),
                             })?),
@@ -203,7 +213,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                         msgs.push(snip20::send_msg(
                             next_hop.pair_address,
                             amount,
-                            Some(to_binary(&Swap::Swap {
+                            Some(to_binary(&Snip20Swap::Swap {
                                 expected_return: None,
                                 to: Some(env.contract.address.clone()),
                             })?),
@@ -296,7 +306,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                     address.clone(),
                 )?);
                 msgs.push(snip20::set_viewing_key_msg(
-                    String::from("SecretSwap Router"),
+                    "SecretSwap Router".into(),
                     None,
                     256,
                     code_hash.clone(),
