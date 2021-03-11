@@ -191,9 +191,9 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 is_done,
                 remaining_route,
             }) => {
-                // this function is called only by the route creatin function
-                // it is intended to always make sure that the route was fully taken
-                // otherwise we'll revert the transaction
+                // this function is called only by the route creation function
+                // it is intended to always make sure that the route was completed successfully
+                // otherwise - revert the transaction
 
                 if env.contract.address != env.message.sender {
                     return Err(StdError::unauthorized());
