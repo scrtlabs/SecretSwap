@@ -83,9 +83,8 @@ echo "SWBTC address: '$wbtc_addr'"
 
 echo "Deploying dummy cashback..."
 
-label=dummy
 export TX_HASH=$(
-  secretcli tx compute instantiate $dummy_code_id '{}' --label $label --from $deployer_name -y |
+  secretcli tx compute instantiate $dummy_code_id '{}' --label dummy --from $deployer_name -y |
   jq -r .txhash
 )
 wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
@@ -98,7 +97,7 @@ echo "Deploying router..."
 
 label=router
 export TX_HASH=$(
-  secretcli tx compute instantiate $router_code_id '{}' --label $label --from $deployer_name -y |
+  secretcli tx compute instantiate $router_code_id '{}' --label router --from $deployer_name -y |
   jq -r .txhash
 )
 wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
@@ -117,9 +116,8 @@ secretcli q compute tx $TX_HASH
 
 echo "Deploying AMM factory..."
 
-label=amm
 export TX_HASH=$(
-  secretcli tx compute instantiate $factory_code_id '{"pair_code_id": '$pair_code_id', "pair_code_hash": '$pair_code_hash', "token_code_id": '$token_code_id', "token_code_hash": '$token_code_hash', "prng_seed": "YWE="}' --label $label --from $deployer_name -y |
+  secretcli tx compute instantiate $factory_code_id '{"pair_code_id": '$pair_code_id', "pair_code_hash": '$pair_code_hash', "token_code_id": '$token_code_id', "token_code_hash": '$token_code_hash', "prng_seed": "YWE="}' --label SecretSwap --from $deployer_name -y |
   jq -r .txhash
 )
 wait_for_tx "$TX_HASH" "Waiting for tx to finish on-chain..."
@@ -130,25 +128,35 @@ echo "Factory address: '$factory_contract'"
 
 echo "Creating sETH/sSCRT pair..."
 
-secretcli tx compute execute --label $label '{"create_pair": {"asset_infos": [{"token": {"contract_addr": '$eth_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}},{"token": {"contract_addr": '$scrt_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}]}}' --from $deployer_name -y --gas 1500000 -b block
+secretcli tx compute execute --label SecretSwap '{"create_pair": {"asset_infos": [{"token": {"contract_addr": '$eth_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}},{"token": {"contract_addr": '$scrt_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}]}}' --from $deployer_name -y --gas 1500000 -b block
 
-pair_contract_eth_scrt=$(secretcli query compute list-contract-by-code $pair_code_id | jq '.[-1].address')
-echo "sETH/sSCRT Pair contract address: '$pair_contract_eth_scrt'"
+pair_contract_eth_sscrt=$(secretcli query compute list-contract-by-code $pair_code_id | jq '.[-1].address')
+echo "sETH/sSCRT Pair contract address: '$pair_contract_eth_sscrt'"
 
-secretcli tx compute execute $(echo "$eth_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract_eth_scrt', "amount": "1000000000000000000000"}}' -b block -y --from $deployer_name
-secretcli tx compute execute $(echo "$scrt_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract_eth_scrt', "amount": "2000000000"}}' -b block -y --from $deployer_name
-secretcli tx compute execute $(echo "$pair_contract_eth_scrt" | tr -d '"') '{"provide_liquidity": {"assets": [{"info": {"token": {"contract_addr": '$scrt_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}, "amount": "2000000000"}, {"info": {"token": {"contract_addr": '$eth_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}, "amount": "1000000000000000000000"}]}}' --from $deployer_name -y --gas 1500000 -b block
+secretcli tx compute execute $(echo "$eth_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract_eth_sscrt', "amount": "1000000000000000000000"}}' -b block -y --from $deployer_name
+secretcli tx compute execute $(echo "$scrt_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract_eth_sscrt', "amount": "2000000000"}}' -b block -y --from $deployer_name
+secretcli tx compute execute $(echo "$pair_contract_eth_sscrt" | tr -d '"') '{"provide_liquidity": {"assets": [{"info": {"token": {"contract_addr": '$scrt_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}, "amount": "2000000000"}, {"info": {"token": {"contract_addr": '$eth_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}, "amount": "1000000000000000000000"}]}}' --from $deployer_name -y --gas 1500000 -b block
 
 echo "Creating sWBTC/sSCRT pair..."
 
-secretcli tx compute execute --label $label '{"create_pair": {"asset_infos": [{"token": {"contract_addr": '$wbtc_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}},{"token": {"contract_addr": '$scrt_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}]}}' --from $deployer_name -y --gas 1500000 -b block
+secretcli tx compute execute --label SecretSwap '{"create_pair": {"asset_infos": [{"token": {"contract_addr": '$wbtc_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}},{"token": {"contract_addr": '$scrt_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}]}}' --from $deployer_name -y --gas 1500000 -b block
 
-pair_contract_wbtc_scrt=$(secretcli query compute list-contract-by-code $pair_code_id | jq '.[-1].address')
-echo "sWBTC/sSCRT Pair contract address: '$pair_contract_wbtc_scrt'"
+pair_contract_wbtc_sscrt=$(secretcli query compute list-contract-by-code $pair_code_id | jq '.[-1].address')
+echo "sWBTC/sSCRT Pair contract address: '$pair_contract_wbtc_sscrt'"
 
-secretcli tx compute execute $(echo "$wbtc_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract_wbtc_scrt', "amount": "100000000000"}}' -b block -y --from $deployer_name
-secretcli tx compute execute $(echo "$scrt_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract_wbtc_scrt', "amount": "50000000000"}}' -b block -y --from $deployer_name
-secretcli tx compute execute $(echo "$pair_contract_wbtc_scrt" | tr -d '"') '{"provide_liquidity": {"assets": [{"info": {"token": {"contract_addr": '$scrt_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}, "amount": "50000000000"}, {"info": {"token": {"contract_addr": '$wbtc_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}, "amount": "100000000000"}]}}' --from $deployer_name -y --gas 1500000 -b block
+secretcli tx compute execute $(echo "$wbtc_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract_wbtc_sscrt', "amount": "100000000000"}}' -b block -y --from $deployer_name
+secretcli tx compute execute $(echo "$scrt_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract_wbtc_sscrt', "amount": "50000000000"}}' -b block -y --from $deployer_name
+secretcli tx compute execute $(echo "$pair_contract_wbtc_sscrt" | tr -d '"') '{"provide_liquidity": {"assets": [{"info": {"token": {"contract_addr": '$scrt_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}, "amount": "50000000000"}, {"info": {"token": {"contract_addr": '$wbtc_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}, "amount": "100000000000"}]}}' --from $deployer_name -y --gas 1500000 -b block
+
+echo "Creating SCRT/sSCRT pair..."
+
+secretcli tx compute execute --label SecretSwap '{"create_pair": {"asset_infos": [{"native_token": {"denom": "uscrt"}},{"token": {"contract_addr": '$scrt_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}]}}' --from $deployer_name -y --gas 1500000 -b block
+
+pair_contract_sscrt_scrt=$(secretcli query compute list-contract-by-code $pair_code_id | jq '.[-1].address')
+echo "SCRT/sSCRT Pair contract address: '$pair_contract_sscrt_scrt'"
+
+secretcli tx compute execute $(echo "$scrt_addr" | tr -d '"') '{"increase_allowance": {"spender": '$pair_contract_sscrt_scrt', "amount": "5000000000"}}' -b block -y --from $deployer_name
+secretcli tx compute execute $(echo "$pair_contract_sscrt_scrt" | tr -d '"') '{"provide_liquidity": {"assets": [{"info": {"native_token": {"denom": "uscrt"}}, "amount": "5000000000"}, {"info": {"token": {"contract_addr": '$scrt_addr', "token_code_hash": '$token_code_hash', "viewing_key": ""}}, "amount": "5000000000"}]}}' --from $deployer_name --amount 5000000000uscrt -y --gas 1500000 -b block
 
 secretcli tx compute execute $(echo "$factory_contract" | tr -d '"') '{"update_config": {"swap_data_endpoint": {"address":'$dummy_contract', "code_hash":'$dummy_code_hash'}}}' -b block -y --from $deployer_name
 
