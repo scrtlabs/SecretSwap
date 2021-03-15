@@ -114,8 +114,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             } else if first_hop.from_token.native_denom == Some("uscrt".into()) {
                 // first hop is SCRT
                 msgs.push(
-                    // finalize the route at the end, to make sure the route was fully taken
-                    CosmosMsg::Wasm(WasmMsg::Execute {
+                        // build swap msg for the next hop                    CosmosMsg::Wasm(WasmMsg::Execute {
                         contract_addr: first_hop.pair_address,
                         callback_code_hash: first_hop.pair_code_hash,
                         msg: to_binary(&NativeSwap::Swap {
