@@ -1,30 +1,40 @@
+use std::collections::VecDeque;
+
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secretswap::Asset;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct InitMsg {}
+pub struct InitMsg {
+    pub register_tokens: Option<Vec<Snip20Data>>,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Hop {
     pub from_token: Token,
     pub pair_address: HumanAddr,
     pub pair_code_hash: String,
-    pub expected_return: Option<Uint128>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Route {
-    pub hops: Vec<Hop>,
+    pub hops: VecDeque<Hop>,
+    pub expected_return: Option<Uint128>,
     pub to: HumanAddr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct Token {
-    pub address: Option<HumanAddr>,   // must set only these if a token
-    pub code_hash: Option<String>,    // must set only these if a token
-    pub native_denom: Option<String>, // must set only this if native coin
+pub struct Snip20Data {
+    pub address: HumanAddr,
+    pub code_hash: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Token {
+    Snip20(Snip20Data),
+    Scrt,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -37,7 +47,7 @@ pub enum HandleMsg {
     },
     FinalizeRoute {},
     RegisterTokens {
-        tokens: Vec<Token>,
+        tokens: Vec<Snip20Data>,
     },
     RecoverFunds {
         token: Token,
