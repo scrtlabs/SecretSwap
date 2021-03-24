@@ -5,7 +5,6 @@ use cosmwasm_std::{
 };
 use secret_toolkit::snip20;
 use secretswap::{Asset, AssetInfo};
-use HandleMsg::RecoverFunds;
 
 use crate::{
     msg::{HandleMsg, Hop, InitMsg, NativeSwap, QueryMsg, Route, Snip20Data, Snip20Swap, Token},
@@ -42,10 +41,10 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 ) -> StdResult<HandleResponse> {
     match msg {
         HandleMsg::Receive {
-            from,
+            from: _,
             msg: Some(msg),
             amount,
-        } => handle_first_hop(deps, &env, from, msg, amount),
+        } => handle_first_hop(deps, &env, msg, amount),
         HandleMsg::Receive {
             from,
             msg: None,
@@ -63,7 +62,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 data: None,
             })
         }
-        RecoverFunds {
+        HandleMsg::RecoverFunds {
             token,
             amount,
             to,
@@ -106,7 +105,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 fn handle_first_hop<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: &Env,
-    from: HumanAddr,
     msg: Binary,
     amount: Uint128,
 ) -> StdResult<HandleResponse> {
@@ -145,7 +143,7 @@ fn handle_first_hop<S: Storage, A: Api, Q: Querier>(
         Token::Snip20(Snip20Data {
             ref address,
             code_hash: _,
-        }) => env.message.sender == *address && env.message.sender == from,
+        }) => env.message.sender == *address,
         Token::Scrt => {
             env.message.sent_funds.len() == 1
                 && env.message.sent_funds[0].amount == amount
@@ -163,6 +161,7 @@ fn handle_first_hop<S: Storage, A: Api, Q: Querier>(
         &mut deps.storage,
         &RouteState {
             is_done: false,
+            current_hop: Some(first_hop.clone()),
             remaining_route: Route {
                 hops, // hops was mutated earlier when we did `hops.pop_front()`
                 expected_return,
@@ -251,6 +250,7 @@ fn handle_hop<S: Storage, A: Api, Q: Querier>(
     match read_route_state(&deps.storage)? {
         Some(RouteState {
             is_done: _,
+            current_hop,
             remaining_route:
                 Route {
                     mut hops,
@@ -263,7 +263,7 @@ fn handle_hop<S: Storage, A: Api, Q: Querier>(
                 None => return Err(StdError::generic_err("route must be at least 1 hop")),
             };
 
-            let (from_token_address, from_token_code_hash) = match next_hop.from_token {
+            let (from_token_address, from_token_code_hash) = match next_hop.clone().from_token {
                 Token::Snip20(Snip20Data { address, code_hash }) => (address, code_hash),
                 Token::Scrt => {
                     return Err(StdError::generic_err(
@@ -272,22 +272,33 @@ fn handle_hop<S: Storage, A: Api, Q: Querier>(
                 }
             };
 
-            if env.message.sender != from_token_address || from != from_token_address {
+            let from_pair_of_current_hop = match current_hop {
+                Some(Hop {
+                    from_token: _,
+                    pair_code_hash: _,
+                    pair_address,
+                }) => pair_address == from,
+                None => false,
+            };
+
+            if env.message.sender != from_token_address || !from_pair_of_current_hop {
                 return Err(StdError::generic_err(
-                    "route can only be called by sending here the token of the next hop",
+                    "route can only be called by receiving the token of the next hop from the previous pair",
                 ));
             }
 
             let mut is_done = false;
             let mut msgs = vec![];
+            let mut current_hop = Some(next_hop.clone());
             if hops.len() == 0 {
                 // last hop
                 // 1. set is_done to true for FinalizeRoute
                 // 2. set expected_return for the final swap
                 // 3. set the recepient of the final swap to be the user
                 is_done = true;
+                current_hop = None;
                 msgs.push(snip20::send_msg(
-                    next_hop.pair_address,
+                    next_hop.clone().pair_address,
                     amount,
                     Some(to_binary(&Snip20Swap::Swap {
                         expected_return,
@@ -297,13 +308,13 @@ fn handle_hop<S: Storage, A: Api, Q: Querier>(
                     256,
                     from_token_code_hash,
                     from_token_address,
-                )?)
+                )?);
             } else {
                 // not last hop
                 // 1. set expected_return to None because we don't care about slippage mid-route
                 // 2. set the recepient of the swap to be this contract (the router)
                 msgs.push(snip20::send_msg(
-                    next_hop.pair_address,
+                    next_hop.clone().pair_address,
                     amount,
                     Some(to_binary(&Snip20Swap::Swap {
                         expected_return: None,
@@ -313,13 +324,14 @@ fn handle_hop<S: Storage, A: Api, Q: Querier>(
                     256,
                     from_token_code_hash,
                     from_token_address,
-                )?)
+                )?);
             }
 
             store_route_state(
                 &mut deps.storage,
                 &RouteState {
                     is_done,
+                    current_hop,
                     remaining_route: Route {
                         hops, // hops was mutated earlier when we did `hops.pop_front()`
                         expected_return,
@@ -345,6 +357,7 @@ fn finalize_route<S: Storage, A: Api, Q: Querier>(
     match read_route_state(&deps.storage)? {
         Some(RouteState {
             is_done,
+            current_hop,
             remaining_route,
         }) => {
             // this function is called only by the route creation function
@@ -363,6 +376,12 @@ fn finalize_route<S: Storage, A: Api, Q: Querier>(
             if remaining_route.hops.len() != 0 {
                 return Err(StdError::generic_err(format!(
                     "cannot finalize: route still contains hops: {:?}",
+                    remaining_route
+                )));
+            }
+            if current_hop != None {
+                return Err(StdError::generic_err(format!(
+                    "cannot finalize: route still processing hops: {:?}",
                     remaining_route
                 )));
             }

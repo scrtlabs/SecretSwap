@@ -4,7 +4,7 @@ use cosmwasm_storage::{ReadonlySingleton, Singleton};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::msg::Route;
+use crate::msg::{Hop, Route};
 
 static KEY_OWNER: &[u8] = b"owner";
 
@@ -21,6 +21,7 @@ static KEY_ROUTE_STATE: &[u8] = b"route_state";
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 pub struct RouteState {
     pub is_done: bool,
+    pub current_hop: Option<Hop>,
     pub remaining_route: Route,
 }
 
