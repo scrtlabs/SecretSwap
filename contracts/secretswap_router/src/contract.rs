@@ -9,8 +9,8 @@ use secretswap::{Asset, AssetInfo};
 use crate::{
     msg::{HandleMsg, Hop, InitMsg, NativeSwap, QueryMsg, Route, Snip20Data, Snip20Swap, Token},
     state::{
-        delete_route_state, read_owner, read_route_state, read_tokens, store_owner,
-        store_route_state, store_tokens, RouteState,
+        delete_route_state, read_owner, read_route_state, read_swap_data_endpoint, read_tokens,
+        store_owner, store_route_state, store_swap_data_endpoint, store_tokens, RouteState,
     },
 };
 
@@ -19,19 +19,35 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-    store_owner(&mut deps.storage, &env.message.sender)?;
-    store_tokens(&mut deps.storage, &vec![])?;
-
-    if let Some(tokens) = msg.register_tokens {
-        let output_msgs = register_tokens(deps, &env, tokens)?;
-
-        Ok(InitResponse {
-            messages: output_msgs,
-            log: vec![],
-        })
+    if let Some(owner) = msg.owner {
+        store_owner(&mut deps.storage, &owner)?;
     } else {
-        Ok(InitResponse::default())
+        store_owner(&mut deps.storage, &env.message.sender)?;
     }
+
+    let mut output_msgs: Vec<CosmosMsg> = vec![];
+
+    store_tokens(&mut deps.storage, &vec![])?;
+    if let Some(tokens) = msg.register_tokens {
+        output_msgs.extend(register_tokens(deps, &env, tokens)?);
+    }
+
+    if let Some(swap_data_endpoint) = msg.swap_data_endpoint {
+        store_swap_data_endpoint(&mut deps.storage, &swap_data_endpoint)?;
+        output_msgs.extend(register_tokens(
+            deps,
+            &env,
+            vec![Snip20Data {
+                address: swap_data_endpoint.address,
+                code_hash: swap_data_endpoint.code_hash,
+            }],
+        )?);
+    }
+
+    Ok(InitResponse {
+        messages: output_msgs,
+        log: vec![],
+    })
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
@@ -93,10 +109,20 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 data: None,
             })
         }
-        HandleMsg::ChangeOwner { new_owner } => {
+        HandleMsg::UpdateSettings {
+            new_owner,
+            new_swap_data_endpoint,
+        } => {
             check_owner(deps, &env)?;
 
-            store_owner(&mut deps.storage, &new_owner)?;
+            if let Some(new_owner) = new_owner {
+                store_owner(&mut deps.storage, &new_owner)?;
+            }
+
+            if let Some(new_swap_data_endpoint) = new_swap_data_endpoint {
+                store_swap_data_endpoint(&mut deps.storage, &new_swap_data_endpoint)?;
+            }
+
             Ok(HandleResponse::default())
         }
     }
@@ -167,6 +193,7 @@ fn handle_first_hop<S: Storage, A: Api, Q: Querier>(
                 expected_return,
                 to,
             },
+            swap_data_endpoint_sum: Uint128(0),
         },
     )?;
 
@@ -249,7 +276,7 @@ fn handle_hop<S: Storage, A: Api, Q: Querier>(
     // 3'. send `amount` Z to pair Z/W with recepient `to`
     match read_route_state(&deps.storage)? {
         Some(RouteState {
-            is_done: _,
+            is_done,
             current_hop,
             remaining_route:
                 Route {
@@ -257,6 +284,7 @@ fn handle_hop<S: Storage, A: Api, Q: Querier>(
                     expected_return,
                     to,
                 },
+            swap_data_endpoint_sum,
         }) => {
             let next_hop: Hop = match hops.pop_front() {
                 Some(next_hop) => next_hop,
@@ -276,10 +304,30 @@ fn handle_hop<S: Storage, A: Api, Q: Querier>(
                 Some(Hop {
                     from_token: _,
                     pair_code_hash: _,
-                    pair_address,
-                }) => pair_address == from,
+                    ref pair_address,
+                }) => *pair_address == from,
                 None => false,
             };
+
+            if let Some(swap_data_endpoint) = read_swap_data_endpoint(&deps.storage)? {
+                if !from_pair_of_current_hop && env.message.sender == swap_data_endpoint.address {
+                    store_route_state(
+                        &mut deps.storage,
+                        &RouteState {
+                            is_done,
+                            current_hop: current_hop.clone(),
+                            remaining_route: Route {
+                                hops,
+                                expected_return,
+                                to,
+                            },
+                            swap_data_endpoint_sum: swap_data_endpoint_sum + amount,
+                        },
+                    )?;
+
+                    return Ok(HandleResponse::default());
+                }
+            }
 
             if env.message.sender != from_token_address || !from_pair_of_current_hop {
                 return Err(StdError::generic_err(
@@ -337,6 +385,7 @@ fn handle_hop<S: Storage, A: Api, Q: Querier>(
                         expected_return,
                         to,
                     },
+                    swap_data_endpoint_sum,
                 },
             )?;
 
@@ -359,6 +408,7 @@ fn finalize_route<S: Storage, A: Api, Q: Querier>(
             is_done,
             current_hop,
             remaining_route,
+            swap_data_endpoint_sum,
         }) => {
             // this function is called only by the route creation function
             // it is intended to always make sure that the route was completed successfully
@@ -388,7 +438,27 @@ fn finalize_route<S: Storage, A: Api, Q: Querier>(
 
             delete_route_state(&mut deps.storage);
 
-            Ok(HandleResponse::default())
+            if swap_data_endpoint_sum.u128() > 0 {
+                if let Some(swap_data_endpoint) = read_swap_data_endpoint(&deps.storage)? {
+                    Ok(HandleResponse {
+                        messages: vec![snip20::send_msg(
+                            remaining_route.to,
+                            swap_data_endpoint_sum,
+                            None,
+                            None,
+                            256,
+                            swap_data_endpoint.code_hash,
+                            swap_data_endpoint.address,
+                        )?],
+                        log: vec![],
+                        data: None,
+                    })
+                } else {
+                    Ok(HandleResponse::default())
+                }
+            } else {
+                Ok(HandleResponse::default())
+            }
         }
         None => Err(StdError::generic_err("no route to finalize")),
     }
