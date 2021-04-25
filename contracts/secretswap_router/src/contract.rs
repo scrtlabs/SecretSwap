@@ -425,7 +425,7 @@ fn finalize_route<S: Storage, A: Api, Q: Querier>(
                 )?;
 
                 let mut messages = vec![];
-                if balance.amount.0 > 0 {
+                if balance.amount.u128() > 0 {
                     let msg = snip20::send_msg(
                         remaining_route.to,
                         balance.amount,
