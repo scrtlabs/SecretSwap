@@ -1,8 +1,7 @@
-use cosmwasm_std::{HumanAddr, StdResult, Storage, Uint128};
+use cosmwasm_std::{HumanAddr, StdResult, Storage};
 use cosmwasm_storage::{ReadonlySingleton, Singleton};
 
 use schemars::JsonSchema;
-use secretswap::SwapDataEndpoint;
 use serde::{Deserialize, Serialize};
 
 use crate::msg::{Hop, Route};
@@ -17,17 +16,20 @@ pub fn read_owner<S: Storage>(storage: &S) -> StdResult<HumanAddr> {
     ReadonlySingleton::new(storage, KEY_OWNER).load()
 }
 
-static KEY_SWAP_DATA_ENDPOINT: &[u8] = b"swap_data_endpoint";
+static KEY_CASHBACK: &[u8] = b"cashback";
 
-pub fn store_swap_data_endpoint<S: Storage>(
-    storage: &mut S,
-    data: &SwapDataEndpoint,
-) -> StdResult<()> {
-    Singleton::new(storage, KEY_SWAP_DATA_ENDPOINT).save(data)
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct SecretContract {
+    pub address: HumanAddr,
+    pub code_hash: String,
 }
 
-pub fn read_swap_data_endpoint<S: Storage>(storage: &S) -> StdResult<Option<SwapDataEndpoint>> {
-    ReadonlySingleton::new(storage, KEY_SWAP_DATA_ENDPOINT).may_load()
+pub fn store_cashback<S: Storage>(storage: &mut S, data: &SecretContract) -> StdResult<()> {
+    Singleton::new(storage, KEY_CASHBACK).save(data)
+}
+
+pub fn read_cashback<S: Storage>(storage: &S) -> StdResult<Option<SecretContract>> {
+    ReadonlySingleton::new(storage, KEY_CASHBACK).may_load()
 }
 
 static KEY_ROUTE_STATE: &[u8] = b"route_state";
@@ -37,7 +39,6 @@ pub struct RouteState {
     pub is_done: bool,
     pub current_hop: Option<Hop>,
     pub remaining_route: Route,
-    pub swap_data_endpoint_sum: Uint128,
 }
 
 pub fn store_route_state<S: Storage>(storage: &mut S, data: &RouteState) -> StdResult<()> {
