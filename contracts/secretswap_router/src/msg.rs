@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 
+use crate::state::SecretContract;
 use cosmwasm_std::{Binary, HumanAddr, Uint128};
 use schemars::JsonSchema;
 use secretswap::Asset;
@@ -8,6 +9,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InitMsg {
     pub register_tokens: Option<Vec<Snip20Data>>,
+    pub cashback: Option<SecretContract>,
+    pub owner: Option<HumanAddr>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -55,8 +58,9 @@ pub enum HandleMsg {
         to: HumanAddr,
         snip20_send_msg: Option<Binary>,
     },
-    ChangeOwner {
-        new_owner: HumanAddr,
+    UpdateSettings {
+        new_owner: Option<HumanAddr>,
+        new_cashback: Option<SecretContract>,
     },
 }
 

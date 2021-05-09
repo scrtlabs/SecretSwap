@@ -9,8 +9,8 @@ use secretswap::{Asset, AssetInfo};
 use crate::{
     msg::{HandleMsg, Hop, InitMsg, NativeSwap, QueryMsg, Route, Snip20Data, Snip20Swap, Token},
     state::{
-        delete_route_state, read_owner, read_route_state, read_tokens, store_owner,
-        store_route_state, store_tokens, RouteState,
+        delete_route_state, read_cashback, read_owner, read_route_state, read_tokens,
+        store_cashback, store_owner, store_route_state, store_tokens, RouteState,
     },
 };
 
@@ -19,19 +19,35 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     env: Env,
     msg: InitMsg,
 ) -> StdResult<InitResponse> {
-    store_owner(&mut deps.storage, &env.message.sender)?;
-    store_tokens(&mut deps.storage, &vec![])?;
-
-    if let Some(tokens) = msg.register_tokens {
-        let output_msgs = register_tokens(deps, &env, tokens)?;
-
-        Ok(InitResponse {
-            messages: output_msgs,
-            log: vec![],
-        })
+    if let Some(owner) = msg.owner {
+        store_owner(&mut deps.storage, &owner)?;
     } else {
-        Ok(InitResponse::default())
+        store_owner(&mut deps.storage, &env.message.sender)?;
     }
+
+    let mut output_msgs: Vec<CosmosMsg> = vec![];
+
+    store_tokens(&mut deps.storage, &vec![])?;
+    if let Some(tokens) = msg.register_tokens {
+        output_msgs.extend(register_tokens(deps, &env, tokens)?);
+    }
+
+    if let Some(cashback) = msg.cashback {
+        store_cashback(&mut deps.storage, &cashback)?;
+        output_msgs.extend(register_tokens(
+            deps,
+            &env,
+            vec![Snip20Data {
+                address: cashback.address,
+                code_hash: cashback.code_hash,
+            }],
+        )?);
+    }
+
+    Ok(InitResponse {
+        messages: output_msgs,
+        log: vec![],
+    })
 }
 
 pub fn handle<S: Storage, A: Api, Q: Querier>(
@@ -93,10 +109,20 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
                 data: None,
             })
         }
-        HandleMsg::ChangeOwner { new_owner } => {
+        HandleMsg::UpdateSettings {
+            new_owner,
+            new_cashback,
+        } => {
             check_owner(deps, &env)?;
 
-            store_owner(&mut deps.storage, &new_owner)?;
+            if let Some(new_owner) = new_owner {
+                store_owner(&mut deps.storage, &new_owner)?;
+            }
+
+            if let Some(new_cashback) = new_cashback {
+                store_cashback(&mut deps.storage, &new_cashback)?;
+            }
+
             Ok(HandleResponse::default())
         }
     }
@@ -137,7 +163,7 @@ fn handle_first_hop<S: Storage, A: Api, Q: Querier>(
         }
     }
 
-    let first_hop: Hop = hops.pop_front().unwrap(); // unrawp is cool because `hops.len() >= 2`
+    let first_hop: Hop = hops.pop_front().unwrap(); // unwrap is cool because `hops.len() >= 2`
 
     let received_first_hop: bool = match first_hop.from_token {
         Token::Snip20(Snip20Data {
@@ -249,7 +275,7 @@ fn handle_hop<S: Storage, A: Api, Q: Querier>(
     // 3'. send `amount` Z to pair Z/W with recepient `to`
     match read_route_state(&deps.storage)? {
         Some(RouteState {
-            is_done: _,
+            is_done,
             current_hop,
             remaining_route:
                 Route {
@@ -276,8 +302,8 @@ fn handle_hop<S: Storage, A: Api, Q: Querier>(
                 Some(Hop {
                     from_token: _,
                     pair_code_hash: _,
-                    pair_address,
-                }) => pair_address == from,
+                    ref pair_address,
+                }) => *pair_address == from,
                 None => false,
             };
 
@@ -294,7 +320,7 @@ fn handle_hop<S: Storage, A: Api, Q: Querier>(
                 // last hop
                 // 1. set is_done to true for FinalizeRoute
                 // 2. set expected_return for the final swap
-                // 3. set the recepient of the final swap to be the user
+                // 3. set the recipient of the final swap to be the user
                 is_done = true;
                 current_hop = None;
                 msgs.push(snip20::send_msg(
@@ -312,7 +338,7 @@ fn handle_hop<S: Storage, A: Api, Q: Querier>(
             } else {
                 // not last hop
                 // 1. set expected_return to None because we don't care about slippage mid-route
-                // 2. set the recepient of the swap to be this contract (the router)
+                // 2. set the recipient of the swap to be this contract (the router)
                 msgs.push(snip20::send_msg(
                     next_hop.clone().pair_address,
                     amount,
@@ -388,7 +414,38 @@ fn finalize_route<S: Storage, A: Api, Q: Querier>(
 
             delete_route_state(&mut deps.storage);
 
-            Ok(HandleResponse::default())
+            if let Some(cashback) = read_cashback(&deps.storage)? {
+                let balance = snip20::balance_query(
+                    &deps.querier,
+                    env.contract.address.clone(),
+                    "SecretSwap Router".into(),
+                    256,
+                    cashback.code_hash.clone(),
+                    cashback.address.clone(),
+                )?;
+
+                let mut messages = vec![];
+                if balance.amount.u128() > 0 {
+                    let msg = snip20::send_msg(
+                        remaining_route.to,
+                        balance.amount,
+                        None,
+                        None,
+                        256,
+                        cashback.code_hash,
+                        cashback.address,
+                    )?;
+                    messages.push(msg);
+                }
+
+                Ok(HandleResponse {
+                    messages,
+                    log: vec![],
+                    data: None,
+                })
+            } else {
+                Ok(HandleResponse::default())
+            }
         }
         None => Err(StdError::generic_err("no route to finalize")),
     }
