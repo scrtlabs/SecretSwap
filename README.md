@@ -1,14 +1,14 @@
-# TerraSwap
+# SecretSwap
 
-Uniswap-inspired automated market-maker (AMM) protocol powered by Smart Contracts on the [Terra](https://terra.money) blockchain.
+Terraswap-inspired automated market-maker (AMM) protocol powered by Secret Contracts on [Secret Network](https://scrt.network/).
 
 ## Contracts
 
-| Name                                               | Description                                  |
-| -------------------------------------------------- | -------------------------------------------- |
-| [`terraswap_factory`](contracts/secretswap_factory) |                                              |
-| [`terraswap_pair`](contracts/secretswap_pair)       |                                              |
-| [`terraswap_token`](contracts/terraswap_token)     | CW20 (ERC20 equivalent) token implementation |
+| Name                                                 | Description                                  |
+|------------------------------------------------------| -------------------------------------------- |
+| [`secretswap_factory`](contracts/secretswap_factory) |                                              |
+| [`secretswap_pair`](contracts/secretswap_pair)       |                                              |
+| [`secretswap_token`](contracts/secretswap_token)     | CW20 (ERC20 equivalent) token implementation |
 
 ## Running this contract
 
