@@ -10,7 +10,7 @@ The factory contract can perform creation of secretswap pair contract and also b
   "token_code_id": "123",
   "init_hook": {
     "msg": "123",
-    "contract_addr": "terra..."
+    "contract_addr": "secret..."
   }
 }
 ```
@@ -22,7 +22,7 @@ The factory contract can perform creation of secretswap pair contract and also b
 ```json
 {
   "update_config": {
-    "owner": "terra...",
+    "owner": "secret...",
     "token_id": "123",
     "pair_code_id": "123"
   }
@@ -37,7 +37,7 @@ The factory contract can perform creation of secretswap pair contract and also b
     "asset_infos": [
       {
         "token": {
-          "contract_address": "terra..."
+          "contract_address": "secret..."
         }
       },
       {
@@ -58,7 +58,7 @@ The factory contract can perform creation of secretswap pair contract and also b
     "asset_infos": [
       {
         "token": {
-          "contract_address": "terra..."
+          "contract_address": "secret..."
         }
       },
       {
@@ -89,7 +89,7 @@ The factory contract can perform creation of secretswap pair contract and also b
     "asset_infos": [
       {
         "token": {
-          "contract_address": "terra..."
+          "contract_address": "secret..."
         }
       },
       {
@@ -138,7 +138,7 @@ When a user execute `CreatePair` operation, it creates `Pair` contract and `LP(l
     "asset_infos": [
       {
         "token": {
-          "contract_addr": "terra1~~"
+          "contract_addr": "secret~~"
         }
       },
       {
@@ -158,15 +158,20 @@ When a user executes `CreatePair` operation, it passes `InitHook` to `Pair` cont
 Once a `Pair` contract invokes it, the sender address is registered as `Pair` contract address for the given asset_infos.
 
 ```json
-{ "register":
-    "asset_infos": [{
+{
+  "register": {
+    "asset_infos": [
+      {
         "token": {
-            "contract_addr": "terra1~~",
-            }
-        }, {
-            "native_token": {
-                "denom": "uusd",
-            }
-    }],
+          "contract_addr": "secret~~"
+        }
+      },
+      {
+        "native_token": {
+          "denom": "uusd"
+        }
+      }
+    ]
+  }
 }
 ```

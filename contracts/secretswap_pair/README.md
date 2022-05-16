@@ -1,10 +1,10 @@
-# TerraSwap Pair
+# SecretSwap Pair
 
 ## Handlers
 
 ### Initialize
 
-This is mainly used from terraswap factory contract to create new terraswap pair. It initialize all swap created parameters which can be updated later with owner key.
+This is mainly used from secretswap factory contract to create new secretswap pair. It initialize all swap created parameters which can be updated later with owner key.
 
 It creates liquidity token contract as init response, and execute init hook to register created liquidity token contract to self.
 
@@ -48,7 +48,7 @@ So, at a 1% tolerance level, if a user sends a transaction with 200 UST and 1 AS
         {
           "info": {
             "token": {
-              "contract_addr": "terra~~"
+              "contract_addr": "secret~~"
             }
           },
           "amount": "1000000"
@@ -75,7 +75,7 @@ So, at a 1% tolerance level, if a user sends a transaction with 200 UST and 1 AS
         {
           "info": {
             "token": {
-              "contract_addr": "terra~~"
+              "contract_addr": "secret~~"
             }
           },
           "amount": "1000000"
